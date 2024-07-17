@@ -123,17 +123,8 @@ def main():
         model = "xl430-w250" if i <= 1 and args.follower else "xl330-m288" if args.follower else "xl330-m077"
 
         control_table[FULL_ARM[i].as_py()] = {
-            "id": i + 1,
-            "model": model,
-            "torque": True if args.follower else True if args.leader and i == 5 else False,
-            "goal_current": 500 if args.follower and i == 5 else 40 if args.leader and i == 5 else None,
-            "goal_position": -40 if args.leader and i == 5 else None,
             "physical_to_logical": build_physical_to_logical(physical_to_logical_tables[i]),
             "logical_to_physical": build_logical_to_physical(logical_to_physical_tables[i]),
-
-            "P": 640 if model == "xl430-w250" else 1500 if model == "xl330-m288" and i != 5 else 250,
-            "I": 0,
-            "D": 3600 if model == "xl430-w250" else 600,
         }
 
         control_table_json[FULL_ARM[i].as_py()] = {

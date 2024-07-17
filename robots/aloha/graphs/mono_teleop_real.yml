@@ -1,0 +1,36 @@
+nodes:
+  - id: aloha-leader
+    build: pip install ../../../node-hub/dynamixel-client
+    path: dynamixel-client
+    inputs:
+      pull_position: dora/timer/millis/10
+      write_goal_position: lcr-to-lcr/leader_goal
+    outputs:
+      - position
+    env:
+      PORT: /dev/tty.usbmodem575E0030111
+      CONFIG: ../configs/leader.left.json
+
+  - id: aloha-to-aloha
+    path: ../nodes/interpolate_aloha_to_aloha.py
+    inputs:
+      leader_position: aloha-leader/position
+      follower_position: aloha-follower/position
+    outputs:
+      - follower_goal
+      - leader_goal
+    env:
+      LEADER_CONTROL: ../configs/leader.left.json
+      FOLLOWER_CONTROL: ../configs/follower.left.json
+
+  - id: aloha-follower
+    build: pip install ../../../node-hub/dynamixel-client
+    path: dynamixel-client
+    inputs:
+      pull_position: dora/timer/millis/10
+      write_goal_position: aloha-to-aloha/follower_goal
+    outputs:
+      - position
+    env:
+      PORT: /dev/tty.usbmodem575E0031141
+      CONFIG: ../configs/follower.left.json

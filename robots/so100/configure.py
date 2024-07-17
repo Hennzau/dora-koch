@@ -90,12 +90,12 @@ def main():
 
     arm = FeetechBus(
         args.port, {
-            "shoulder_pan": (1, "scs_series"),
-            "shoulder_lift": (2, "scs_series"),
-            "elbow_flex": (3, "scs_series"),
-            "wrist_flex": (4, "scs_series"),
-            "wrist_roll": (5, "scs_series"),
-            "gripper": (6, "scs_series")
+            "shoulder_pan": (1, "st3215"),
+            "shoulder_lift": (2, "st3215"),
+            "elbow_flex": (3, "st3215"),
+            "wrist_flex": (4, "st3215"),
+            "wrist_roll": (5, "st3215"),
+            "gripper": (6, "st3215")
         }
     )
 
@@ -118,9 +118,6 @@ def main():
     control_table_json = {}
     for i in range(len(FULL_ARM)):
         control_table[FULL_ARM[i].as_py()] = {
-            "id": i + 1,
-            "model": "st3215",
-            "torque": True,
             "physical_to_logical": build_physical_to_logical(physical_to_logical_tables[i]),
             "logical_to_physical": build_logical_to_physical(logical_to_physical_tables[i])
         }
