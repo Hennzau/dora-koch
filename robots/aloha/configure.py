@@ -20,9 +20,9 @@ import json
 import numpy as np
 import pyarrow as pa
 
-from common.dynamixel_bus import DynamixelBus, TorqueMode, OperatingMode
-from common.position_control.utils import physical_to_logical, logical_to_physical
-from common.position_control.configure import build_physical_to_logical_tables, build_logical_to_physical_tables, \
+from bus import DynamixelBus, TorqueMode, OperatingMode
+from nodes.position_control.utils import physical_to_logical, logical_to_physical
+from nodes.position_control.configure import build_physical_to_logical_tables, build_logical_to_physical_tables, \
     build_physical_to_logical, build_logical_to_physical
 
 FULL_ARM = pa.array([

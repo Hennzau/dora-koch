@@ -12,7 +12,7 @@ import pyarrow as pa
 
 from dora import Node
 
-from common.dynamixel_bus import DynamixelBus, TorqueMode
+from .bus import DynamixelBus, TorqueMode
 
 
 class Client:
@@ -26,35 +26,18 @@ class Client:
 
         self.bus = DynamixelBus(config["port"], description)
 
-        # Set client configuration values
+        # Set client configuration values, raise errors if the values are not set to indicate that the motors are not
+        # configured correctly
 
-        try:
-            self.bus.write_torque_enable(config["torque"], self.config["joints"])
-        except Exception as e:
-            print("Error writing torque status:", e)
+        self.bus.write_torque_enable(config["torque"], self.config["joints"])
+        self.bus.write_goal_current(config["goal_current"], self.config["joints"])
 
-        try:
-            self.bus.write_goal_current(config["goal_current"], self.config["joints"])
-        except Exception as e:
-            print("Error writing goal current:", e)
         time.sleep(0.1)
-
-        try:
-            self.bus.write_position_d_gain(config["D"], self.config["joints"])
-        except Exception as e:
-            print("Error writing gains:", e)
+        self.bus.write_position_d_gain(config["D"], self.config["joints"])
         time.sleep(0.1)
-
-        try:
-            self.bus.write_position_i_gain(config["I"], self.config["joints"])
-        except Exception as e:
-            print("Error writing gains:", e)
+        self.bus.write_position_i_gain(config["I"], self.config["joints"])
         time.sleep(0.1)
-
-        try:
-            self.bus.write_position_p_gain(config["P"], self.config["joints"])
-        except Exception as e:
-            print("Error writing gains:", e)
+        self.bus.write_position_p_gain(config["P"], self.config["joints"])
 
         self.node = Node(config["name"])
 
@@ -115,19 +98,19 @@ class Client:
         except ConnectionError as e:
             print("Error reading current:", e)
 
-    def write_goal_position(self, goal_position_with_joints: pa.Array):
+    def write_goal_position(self, goal_position: pa.Array):
         try:
-            joints = goal_position_with_joints[0]["joints"].values
-            goal_position = goal_position_with_joints[0]["positions"].values
+            joints = goal_position[0]["joints"].values
+            goal_position = goal_position[0]["values"].values
 
             self.bus.write_goal_position(goal_position, joints)
         except ConnectionError as e:
             print("Error writing goal position:", e)
 
-    def write_goal_current(self, goal_current_with_joints: pa.Array):
+    def write_goal_current(self, goal_current: pa.Array):
         try:
-            joints = goal_current_with_joints[0]["joints"].values
-            goal_current = goal_current_with_joints[0]["currents"].values
+            joints = goal_current[0]["joints"].values
+            goal_current = goal_current[0]["values"].values
 
             self.bus.write_goal_current(goal_current, joints)
         except ConnectionError as e:
