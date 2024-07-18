@@ -3,34 +3,46 @@ nodes:
     build: pip install ../../../node-hub/dynamixel-client
     path: dynamixel-client
     inputs:
-      pull_position: dora/timer/millis/10
-      write_goal_position: lcr-to-lcr/leader_goal
+      pull_position:
+        source: dora/timer/millis/10
+        queue_size: 1
+
+      write_goal_position: aloha-to-aloha/leader_goal
     outputs:
       - position
     env:
-      PORT: /dev/tty.usbmodem575E0030111
-      CONFIG: ../configs/leader.left.json
+      PORT: COM13
+      CONFIG: ../configs/leader.right.json
 
   - id: aloha-to-aloha
     path: ../nodes/interpolate_aloha_to_aloha.py
     inputs:
-      leader_position: aloha-leader/position
-      follower_position: aloha-follower/position
+      leader_position:
+        source: aloha-leader/position
+        queue_size: 1
+
+      follower_position:
+        source: aloha-follower/position
+        queue_size: 1
     outputs:
       - follower_goal
       - leader_goal
     env:
-      LEADER_CONTROL: ../configs/leader.left.json
-      FOLLOWER_CONTROL: ../configs/follower.left.json
+      LEADER_CONTROL: ../configs/leader.right.json
+      FOLLOWER_CONTROL: ../configs/follower.right.json
 
   - id: aloha-follower
     build: pip install ../../../node-hub/dynamixel-client
     path: dynamixel-client
     inputs:
-      pull_position: dora/timer/millis/10
-      write_goal_position: aloha-to-aloha/follower_goal
+      pull_position:
+        source: dora/timer/millis/10
+        queue_size: 1
+      write_goal_position:
+        source: aloha-to-aloha/follower_goal
+        queue_size: 1
     outputs:
       - position
     env:
-      PORT: /dev/tty.usbmodem575E0031141
-      CONFIG: ../configs/follower.left.json
+      PORT: COM12
+      CONFIG: ../configs/follower.right.json

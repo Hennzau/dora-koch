@@ -114,11 +114,11 @@ def main():
 
     print("Please move the Aloha to the first position.")
     pause()
-    physical_position_1 = arm.read_position(FULL_ARM)["positions"].values
+    physical_position_1 = arm.read_position(FULL_ARM)["values"].values
 
     print("Please move the Aloha to the second position.")
     pause()
-    physical_position_2 = arm.read_position(FULL_ARM)["positions"].values
+    physical_position_2 = arm.read_position(FULL_ARM)["values"].values
 
     print("Configuration completed.")
 
@@ -136,8 +136,8 @@ def main():
         control_table_json[FULL_ARM[i].as_py()] = {
             "id": i + 1,
             "model": "x_series",
-            "torque": True if args.follower else True if args.leader and i == 5 else False,
-            "goal_current": None,
+            "torque": True if args.follower else True if args.leader and i == 8 else False,
+            "goal_current": None if args.leader else 100 if args.follower and i == 8 else None,
             "goal_position": None,
             "physical_to_logical": physical_to_logical_tables[i],
             "logical_to_physical": logical_to_physical_tables[i],
@@ -162,7 +162,7 @@ def main():
         logical_position = physical_to_logical(base_physical_position, control_table)
 
         print(
-            f"Logical Position: {logical_position["positions"]}")
+            f"Logical Position: {logical_position["values"]}")
 
         time.sleep(0.5)
 

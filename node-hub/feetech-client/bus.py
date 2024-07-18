@@ -130,14 +130,17 @@ class FeetechBus:
         if isinstance(values, pa.Scalar):
             values = pa.array([values] * len(motor_ids), type=values.type)
 
-        values = pa.array(
-            [pa.scalar(32767 - value.as_py(), pa.uint32()) if value.as_py() < 0 else pa.scalar(value.as_py(),
-                                                                                               pa.uint32())
-             for value in values],
-            type=pa.uint32())
-
         motor_ids, values = ([motor_ids[i] for i in range(len(motor_ids)) if values[i].as_py() is not None],
                              values.drop_null())
+
+        if len(values) == 0:
+            return
+
+        values = values.from_buffers(
+            pa.uint32(),
+            len(values),
+            values.buffers()
+        )
 
         group_key = f"{data_name}_" + "_".join([str(idx) for idx in motor_ids])
 

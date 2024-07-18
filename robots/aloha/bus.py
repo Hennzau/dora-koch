@@ -139,14 +139,17 @@ class DynamixelBus:
         if isinstance(values, pa.Scalar):
             values = pa.array([values] * len(motor_ids), type=values.type)
 
+        motor_ids, values = ([motor_ids[i] for i in range(len(motor_ids)) if values[i].as_py() is not None],
+                             values.drop_null())
+
+        if len(values) == 0:
+            return
+
         values = values.from_buffers(
             pa.uint32(),
             len(values),
             values.buffers()
         )
-
-        motor_ids, values = ([motor_ids[i] for i in range(len(motor_ids)) if values[i].as_py() is not None],
-                             values.drop_null())
 
         group_key = f"{data_name}_" + "_".join([str(idx) for idx in motor_ids])
 
