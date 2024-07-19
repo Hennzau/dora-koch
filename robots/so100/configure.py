@@ -21,25 +21,29 @@ import pyarrow as pa
 
 from bus import FeetechBus, TorqueMode, OperatingMode
 from nodes.position_control.utils import physical_to_logical, logical_to_physical
-from nodes.position_control.configure import build_physical_to_logical_tables, build_logical_to_physical_tables, \
-    build_physical_to_logical, build_logical_to_physical
+from nodes.position_control.configure import (
+    build_physical_to_logical_tables,
+    build_logical_to_physical_tables,
+    build_physical_to_logical,
+    build_logical_to_physical,
+)
 
-FULL_ARM = pa.array([
-    "shoulder_pan",
-    "shoulder_lift",
-    "elbow_flex",
-    "wrist_flex",
-    "wrist_roll",
-    "gripper"
-], type=pa.string())
+FULL_ARM = pa.array(
+    [
+        "shoulder_pan",
+        "shoulder_lift",
+        "elbow_flex",
+        "wrist_flex",
+        "wrist_roll",
+        "gripper",
+    ],
+    type=pa.string(),
+)
 
-ARM_WITHOUT_GRIPPER = pa.array([
-    "shoulder_pan",
-    "shoulder_lift",
-    "elbow_flex",
-    "wrist_flex",
-    "wrist_roll"
-], type=pa.string())
+ARM_WITHOUT_GRIPPER = pa.array(
+    ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"],
+    type=pa.string(),
+)
 
 GRIPPER = pa.array(["gripper"], type=pa.string())
 
@@ -66,11 +70,22 @@ def configure_servos(bus: FeetechBus):
 def main():
     parser = argparse.ArgumentParser(
         description="SO100 Auto Configure: This program is used to automatically configure the Low Cost Robot (SO100) "
-                    "for the user.")
+        "for the user."
+    )
 
-    parser.add_argument("--port", type=str, required=True, help="The port of the SO100.")
-    parser.add_argument("--right", action="store_true", help="If the SO100 is on the right side of the user.")
-    parser.add_argument("--left", action="store_true", help="If the SO100 is on the left side of the user.")
+    parser.add_argument(
+        "--port", type=str, required=True, help="The port of the SO100."
+    )
+    parser.add_argument(
+        "--right",
+        action="store_true",
+        help="If the SO100 is on the right side of the user.",
+    )
+    parser.add_argument(
+        "--left",
+        action="store_true",
+        help="If the SO100 is on the left side of the user.",
+    )
 
     args = parser.parse_args()
 
@@ -82,21 +97,23 @@ def main():
     wanted_position_1 = pa.array([0, -90, 90, 0, -90, 0], type=pa.int32())
     wanted_position_2 = pa.array([90, 0, 0, 90, 0, -90], type=pa.int32())
 
-    wanted = pa.array([
-        (wanted_position_1[i], wanted_position_2[i])
-
-        for i in range(len(wanted_position_1))
-    ])
+    wanted = pa.array(
+        [
+            (wanted_position_1[i], wanted_position_2[i])
+            for i in range(len(wanted_position_1))
+        ]
+    )
 
     arm = FeetechBus(
-        args.port, {
+        args.port,
+        {
             "shoulder_pan": (1, "st3215"),
             "shoulder_lift": (2, "st3215"),
             "elbow_flex": (3, "st3215"),
             "wrist_flex": (4, "st3215"),
             "wrist_roll": (5, "st3215"),
-            "gripper": (6, "st3215")
-        }
+            "gripper": (6, "st3215"),
+        },
     )
 
     configure_servos(arm)
@@ -111,15 +128,23 @@ def main():
 
     print("Configuration completed.")
 
-    physical_to_logical_tables = build_physical_to_logical_tables(physical_position_1, physical_position_2, wanted)
-    logical_to_physical_tables = build_logical_to_physical_tables(physical_position_1, physical_position_2, wanted)
+    physical_to_logical_tables = build_physical_to_logical_tables(
+        physical_position_1, physical_position_2, wanted
+    )
+    logical_to_physical_tables = build_logical_to_physical_tables(
+        physical_position_1, physical_position_2, wanted
+    )
 
     control_table = {}
     control_table_json = {}
     for i in range(len(FULL_ARM)):
         control_table[FULL_ARM[i].as_py()] = {
-            "physical_to_logical": build_physical_to_logical(physical_to_logical_tables[i]),
-            "logical_to_physical": build_logical_to_physical(logical_to_physical_tables[i])
+            "physical_to_logical": build_physical_to_logical(
+                physical_to_logical_tables[i]
+            ),
+            "logical_to_physical": build_logical_to_physical(
+                logical_to_physical_tables[i]
+            ),
         }
 
         control_table_json[FULL_ARM[i].as_py()] = {
@@ -127,13 +152,16 @@ def main():
             "model": "sts3215",
             "torque": True,
             "physical_to_logical": physical_to_logical_tables[i],
-            "logical_to_physical": logical_to_physical_tables[i]
+            "logical_to_physical": logical_to_physical_tables[i],
         }
 
     left = "left" if args.left else "right"
-    path = (input(
-        f"Please enter the path of the configuration file (default is ./robots/so100/configs/follower.{left}.json): ")
-            or f"./robots/so100/configs/follower.{left}.json")
+    path = (
+        input(
+            f"Please enter the path of the configuration file (default is ./robots/so100/configs/follower.{left}.json): "
+        )
+        or f"./robots/so100/configs/follower.{left}.json"
+    )
 
     with open(path, "w") as file:
         json.dump(control_table_json, file)
@@ -142,8 +170,7 @@ def main():
         base_physical_position = arm.read_position(FULL_ARM)
         logical_position = physical_to_logical(base_physical_position, control_table)
 
-        print(
-            f"Logical Position: {logical_position["values"]}")
+        print(f"Logical Position: {logical_position["values"]}")
 
         time.sleep(0.5)
 

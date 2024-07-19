@@ -40,6 +40,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
+python = "3.9"
 dora-rs = "0.3.5"
 
 [tool.poetry.scripts]

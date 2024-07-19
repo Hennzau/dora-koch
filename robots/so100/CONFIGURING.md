@@ -51,7 +51,7 @@ python ./robots/so100/configure.py --port /dev/ttyUSB0 --follower --left
 **Note:** The wizard will disable all torque so you can move the arm freely to the Position 1.
 **Note:** You will be asked to set the arm in two different positions. The two positions are:
 
-![image](https://github.com/Hennzau/Hennzau/blob/main/assets/Koch_arm_positions.png)
+TODO: image for SO100
 
 This configuration has to be exported into environment variables inside the graph file. Here is an example of the
 configuration:

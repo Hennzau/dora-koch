@@ -61,7 +61,7 @@ class Client:
             node.send_output(
                 "position",
                 pa.array([self.bus.read_position(self.config["joints"])]),
-                metadata
+                metadata,
             )
 
         except ConnectionError as e:
@@ -72,7 +72,7 @@ class Client:
             node.send_output(
                 "velocity",
                 pa.array([self.bus.read_velocity(self.config["joints"])]),
-                metadata
+                metadata,
             )
         except ConnectionError as e:
             print("Error reading velocity:", e)
@@ -82,7 +82,7 @@ class Client:
             node.send_output(
                 "current",
                 pa.array([self.bus.read_current(self.config["joints"])]),
-                metadata
+                metadata,
             )
         except ConnectionError as e:
             print("Error reading current:", e)
@@ -101,13 +101,30 @@ def main():
     # Handle dynamic nodes, ask for the name of the node in the dataflow
     parser = argparse.ArgumentParser(
         description="Feetech Client: This node is used to represent a chain of feetech motors. "
-                    "It can be used to read "
-                    "positions, velocities, currents, and set goal positions and currents.")
+        "It can be used to read "
+        "positions, velocities, currents, and set goal positions and currents."
+    )
 
-    parser.add_argument("--name", type=str, required=False, help="The name of the node in the dataflow.",
-                        default="feetech_client")
-    parser.add_argument("--port", type=str, required=False, help="The port of the feetech motors.", default=None)
-    parser.add_argument("--config", type=str, help="The configuration of the feetech motors.", default=None)
+    parser.add_argument(
+        "--name",
+        type=str,
+        required=False,
+        help="The name of the node in the dataflow.",
+        default="feetech_client",
+    )
+    parser.add_argument(
+        "--port",
+        type=str,
+        required=False,
+        help="The port of the feetech motors.",
+        default=None,
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="The configuration of the feetech motors.",
+        default=None,
+    )
 
     args = parser.parse_args()
 
@@ -115,7 +132,8 @@ def main():
     if not os.environ.get("PORT") and args.port is None:
         raise ValueError(
             "The port is not set. Please set the port of the feetech motors in the environment variables or as an "
-            "argument.")
+            "argument."
+        )
 
     port = os.environ.get("PORT") if args.port is None else args.port
 
@@ -123,7 +141,8 @@ def main():
     if not os.environ.get("CONFIG") and args.config is None:
         raise ValueError(
             "The configuration is not set. Please set the configuration of the feetech motors in the environment "
-            "variables or as an argument.")
+            "variables or as an argument."
+        )
 
     with open(os.environ.get("CONFIG") if args.config is None else args.config) as file:
         config = json.load(file)
@@ -137,8 +156,10 @@ def main():
         "ids": [config[joint]["id"] for joint in joints],
         "joints": pa.array(joints, pa.string()),
         "models": [config[joint]["model"] for joint in joints],
-
-        "torque": [TorqueMode.ENABLED if config[joint]["torque"] else TorqueMode.DISABLED for joint in joints],
+        "torque": [
+            TorqueMode.ENABLED if config[joint]["torque"] else TorqueMode.DISABLED
+            for joint in joints
+        ],
     }
 
     print("Feetech Client Configuration: ", bus, flush=True)
@@ -148,5 +169,5 @@ def main():
     client.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
