@@ -8,8 +8,8 @@ from dora import Node
 from gymnasium import spaces
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 
-EPISODE = 19
-REPO_ID = "cadene/reachy2_mobile_base"
+EPISODE = 10
+REPO_ID = "haixuantao/high_five_sea"
 
 
 class DoraEnv(gym.Env):
@@ -67,6 +67,40 @@ class DoraEnv(gym.Env):
         self.to_index = self.dataset.episode_data_index["to"][EPISODE].item()
 
         self.index = 0
+        self._stop = True
+        self._step_time = time.time()
+
+    def _get_obs(self):
+        obs_initial_time = time.time()
+        while (time.time() - obs_initial_time < 1 / self.fps) or self._stop:
+            event = self._node.next(timeout=0.01)
+
+            ## If event is None, the node event stream is closed and we should terminate the env
+            if event is None:
+                self._terminated = True
+                print("Node event stream closed.")
+                raise ConnectionError("Dora Node event stream closed.")
+
+            if event["type"] == "INPUT":
+                # Map Image input into pixels key within Aloha environment
+                if "cam" in event["id"]:
+                    camera = event["id"]
+                    hwc_shape = self.cameras[camera]
+                    self._observation["pixels"][event["id"]] = (
+                        event["value"].to_numpy().reshape(hwc_shape)
+                    )
+                elif "stop" in event["id"]:
+                    print(f"{self._stop=}")
+                    self._stop = not self._stop
+                else:
+                    # Map other inputs into the observation dictionary using the event id as key
+                    self._observation[event["id"]] = event["value"].to_numpy()
+
+            # If the event is a timeout error break the update loop.
+            elif event["type"] == "ERROR":
+                if not self._stop:
+                    print("starting flow")
+                    break
 
     def reset(self, seed: int | None = None):  # type: ignore
         del seed
@@ -81,36 +115,44 @@ class DoraEnv(gym.Env):
         image = image.permute((1, 2, 0)).numpy() * 255
         image = image.astype(np.uint8)
 
-        if image.shape != (800, 1280, 3):  # , "image not in the right order"
+        if image.shape != (640, 480, 3):  # , "image not in the right order"
             raise ValueError("image not in the right order")
+        self._get_obs()
+        # self._observation= state.numpy()
 
-        self._observation = {"pixels": {"cam_trunk": image}, "agent_pos": state.numpy()}
+        self._observation = {"agent_pos": state.numpy(), "pixels": {"cam_trunk": image}}
 
         return self._observation, info
 
     def step(self, action: np.ndarray):
         # if action is not None:
         # Send the action to the dataflow as action key.
-        self._node.send_output("action", pa.array(action))
+        time.sleep(max(0, 1 / self.fps - (time.time() - self._step_time)))
+        self._step_time = time.time()
+        self._get_obs()
 
         # Send the action to the dataflow as action key.
         # Space observation so that they match the dataset
         ## Convert image from chw to hwc
 
         if self.from_index + self.index >= self.to_index:
-            self._terminated = True
-            return self._observation, 0, True, False, {}
+            self._stop = True
+            self.index = 0
 
         item = self.dataset[self.from_index + self.index]
         state = item["observation.state"]
         image = item["observation.images.cam_trunk"]
         image = image.permute((1, 2, 0)).numpy() * 255
         image = image.astype(np.uint8)
+        action = item["action"].numpy()
+        self._node.send_output("action", pa.array(action))
 
-        if image.shape != (800, 1280, 3):  # , "image not in the right order"
+        if image.shape != (640, 480, 3):  # , "image not in the right order"
             raise ValueError("image not in the right order")
 
-        self._observation = {"pixels": {"cam_trunk": image}, "agent_pos": state.numpy()}
+        # self._get_obs()
+        self._observation = {"agent_pos": state.numpy(), "pixels": {"cam_trunk": image}}
+        # self._observation["pixels"] = {"cam_trunk": image}
         # Reset the observation
         reward = 0
         terminated = truncated = self._terminated
@@ -123,5 +165,4 @@ class DoraEnv(gym.Env):
     def close(self):
         # Drop the node
         del self._node
-        pass
         pass
