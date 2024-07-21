@@ -19,7 +19,8 @@ import json
 
 import pyarrow as pa
 
-from bus import DynamixelBus, TorqueMode, OperatingMode
+from bus import DynamixelBus, TorqueMode, OperatingMode, joints_values_to_arrow
+
 from nodes.position_control.utils import physical_to_logical, logical_to_physical
 from nodes.position_control.configure import (
     build_physical_to_logical_tables,
@@ -60,10 +61,19 @@ def configure_servos(bus: DynamixelBus):
     Configure the servos for the LCR.
     :param bus: DynamixelBus
     """
-    bus.write_torque_enable(TorqueMode.DISABLED, FULL_ARM)
+    bus.write_torque_enable(
+        joints_values_to_arrow(FULL_ARM, [TorqueMode.DISABLED.value] * 6)
+    )
 
-    bus.write_operating_mode(OperatingMode.EXTENDED_POSITION, ARM_WITHOUT_GRIPPER)
-    bus.write_operating_mode(OperatingMode.CURRENT_CONTROLLED_POSITION, GRIPPER)
+    bus.write_operating_mode(
+        joints_values_to_arrow(
+            ARM_WITHOUT_GRIPPER, [OperatingMode.EXTENDED_POSITION.value] * 5
+        )
+    )
+
+    bus.write_operating_mode(
+        joints_values_to_arrow(GRIPPER, [OperatingMode.EXTENDED_POSITION.value])
+    )
 
 
 def main():
@@ -126,11 +136,11 @@ def main():
 
     print("Please move the LCR to the first position.")
     pause()
-    physical_position_1 = arm.read_position(FULL_ARM)["values"].values
+    physical_position_1 = arm.read_position(FULL_ARM).field("values")
 
     print("Please move the LCR to the second position.")
     pause()
-    physical_position_2 = arm.read_position(FULL_ARM)["values"].values
+    physical_position_2 = arm.read_position(FULL_ARM).field("values")
 
     print("Configuration completed.")
 
@@ -170,7 +180,7 @@ def main():
                 if args.follower and i == 5
                 else 40 if args.leader and i == 5 else None
             ),
-            "goal_position": -40 if args.leader and i == 5 else None,
+            "goal_position": -40.0 if args.leader and i == 5 else None,
             "physical_to_logical": physical_to_logical_tables[i],
             "logical_to_physical": logical_to_physical_tables[i],
             "P": (

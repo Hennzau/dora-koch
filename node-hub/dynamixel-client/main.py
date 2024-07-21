@@ -12,7 +12,7 @@ import pyarrow as pa
 
 from dora import Node
 
-from .bus import DynamixelBus, TorqueMode
+from .bus import DynamixelBus, TorqueMode, joints_values_to_arrow
 
 
 class Client:
@@ -29,15 +29,27 @@ class Client:
         # Set client configuration values, raise errors if the values are not set to indicate that the motors are not
         # configured correctly
 
-        self.bus.write_torque_enable(config["torque"], self.config["joints"])
-        self.bus.write_goal_current(config["goal_current"], self.config["joints"])
+        self.bus.write_torque_enable(
+            joints_values_to_arrow(self.config["joints"], self.config["torque"])
+        )
+        self.bus.write_goal_current(
+            joints_values_to_arrow(self.config["joints"], self.config["goal_current"])
+        )
 
         time.sleep(0.1)
-        self.bus.write_position_d_gain(config["D"], self.config["joints"])
+        self.bus.write_position_d_gain(
+            joints_values_to_arrow(self.config["joints"], self.config["D"])
+        )
+
         time.sleep(0.1)
-        self.bus.write_position_i_gain(config["I"], self.config["joints"])
+        self.bus.write_position_i_gain(
+            joints_values_to_arrow(self.config["joints"], self.config["I"])
+        )
+
         time.sleep(0.1)
-        self.bus.write_position_p_gain(config["P"], self.config["joints"])
+        self.bus.write_position_p_gain(
+            joints_values_to_arrow(self.config["joints"], self.config["P"])
+        )
 
         self.node = Node(config["name"])
 
@@ -65,13 +77,18 @@ class Client:
                 raise ValueError("An error occurred in the dataflow: " + event["error"])
 
     def close(self):
-        self.bus.write_torque_enable(TorqueMode.DISABLED, self.config["joints"])
+        self.bus.write_torque_enable(
+            joints_values_to_arrow(
+                self.config["joints"],
+                [TorqueMode.DISABLED] * len(self.config["joints"]),
+            )
+        )
 
     def pull_position(self, node, metadata):
         try:
             node.send_output(
                 "position",
-                pa.array([self.bus.read_position(self.config["joints"])]),
+                self.bus.read_position(self.config["joints"]),
                 metadata,
             )
 
@@ -82,7 +99,7 @@ class Client:
         try:
             node.send_output(
                 "velocity",
-                pa.array([self.bus.read_velocity(self.config["joints"])]),
+                self.bus.read_velocity(self.config["joints"]),
                 metadata,
             )
         except ConnectionError as e:
@@ -92,27 +109,21 @@ class Client:
         try:
             node.send_output(
                 "current",
-                pa.array([self.bus.read_current(self.config["joints"])]),
+                self.bus.read_current(self.config["joints"]),
                 metadata,
             )
         except ConnectionError as e:
             print("Error reading current:", e)
 
-    def write_goal_position(self, goal_position: pa.Array):
+    def write_goal_position(self, goal_position: pa.StructArray):
         try:
-            joints = goal_position[0]["joints"].values
-            goal_position = goal_position[0]["values"].values
-
-            self.bus.write_goal_position(goal_position, joints)
+            self.bus.write_goal_position(goal_position)
         except ConnectionError as e:
             print("Error writing goal position:", e)
 
-    def write_goal_current(self, goal_current: pa.Array):
+    def write_goal_current(self, goal_current: pa.StructArray):
         try:
-            joints = goal_current[0]["joints"].values
-            goal_current = goal_current[0]["values"].values
-
-            self.bus.write_goal_current(goal_current, joints)
+            self.bus.write_goal_current(goal_current)
         except ConnectionError as e:
             print("Error writing goal current:", e)
 
@@ -176,10 +187,17 @@ def main():
         "ids": [config[joint]["id"] for joint in joints],
         "joints": pa.array(joints, pa.string()),
         "models": [config[joint]["model"] for joint in joints],
-        "torque": [
-            TorqueMode.ENABLED if config[joint]["torque"] else TorqueMode.DISABLED
-            for joint in joints
-        ],
+        "torque": pa.array(
+            [
+                (
+                    TorqueMode.ENABLED.value
+                    if config[joint]["torque"]
+                    else TorqueMode.DISABLED.value
+                )
+                for joint in joints
+            ],
+            type=pa.uint32(),
+        ),
         "goal_current": pa.array(
             [
                 (
@@ -188,11 +206,12 @@ def main():
                     else None
                 )
                 for joint in joints
-            ]
+            ],
+            type=pa.uint32(),
         ),
-        "P": pa.array([config[joint]["P"] for joint in joints], type=pa.int32()),
-        "I": pa.array([config[joint]["I"] for joint in joints], type=pa.int32()),
-        "D": pa.array([config[joint]["D"] for joint in joints], type=pa.int32()),
+        "P": pa.array([config[joint]["P"] for joint in joints], type=pa.uint32()),
+        "I": pa.array([config[joint]["I"] for joint in joints], type=pa.uint32()),
+        "D": pa.array([config[joint]["D"] for joint in joints], type=pa.uint32()),
     }
 
     print("Dynamixel Client Configuration: ", bus, flush=True)

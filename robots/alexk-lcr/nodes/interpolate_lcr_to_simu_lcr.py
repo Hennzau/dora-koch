@@ -18,8 +18,9 @@ from position_control.utils import (
     logical_to_physical,
     physical_to_logical,
     compute_goal_with_offset,
-    ARROW_LOGICAL_VALUES,
+    joints_values_to_arrow,
 )
+
 from position_control.configure import (
     build_logical_to_physical,
     build_physical_to_logical,
@@ -71,18 +72,9 @@ def main():
             leader_control[joint]["logical_to_physical"]
         )
 
-    logical_leader_goal = pa.scalar(
-        {
-            "joints": pa.array(leader_control.keys(), type=pa.string()),
-            "values": pa.array(
-                [
-                    leader_control[joint]["goal_position"]
-                    for joint in leader_control.keys()
-                ],
-                type=pa.float32(),
-            ),
-        },
-        type=ARROW_LOGICAL_VALUES,
+    logical_leader_initial_goal = joints_values_to_arrow(
+        leader_control.keys(),
+        [leader_control[joint]["goal_position"] for joint in leader_control.keys()],
     )
 
     node = Node(args.name)
@@ -96,18 +88,16 @@ def main():
             event_id = event["id"]
 
             if event_id == "leader_position":
-                leader_position = event["value"][0]
+                leader_position = event["value"]
 
                 if not leader_initialized:
                     leader_initialized = True
 
                     physical_goal = compute_goal_with_offset(
-                        leader_position, logical_leader_goal, leader_control
+                        leader_position, logical_leader_initial_goal, leader_control
                     )
 
-                    node.send_output(
-                        "leader_goal", pa.array([physical_goal]), event["metadata"]
-                    )
+                    node.send_output("leader_goal", physical_goal, event["metadata"])
 
                 leader_position = physical_to_logical(leader_position, leader_control)
 
@@ -125,26 +115,18 @@ def main():
 
                 interpolation_a = pa.array([0, 0, 0, 0, 90, 0], type=pa.float32())
 
-                follower_goal = pa.scalar(
-                    {
-                        "joints": [
-                            joint.as_py() + "_joint"
-                            for joint in leader_position["joints"].values
-                        ],
-                        "values": pc.multiply(
-                            pc.add(leader_position["values"].values, interpolation_a),
-                            interpolation_m,
-                        ),
-                    },
-                    type=ARROW_LOGICAL_VALUES,
+                logical_goal = joints_values_to_arrow(
+                    leader_position.field("joints"),
+                    pc.multiply(
+                        pc.add(leader_position.field("values"), interpolation_a),
+                        interpolation_m,
+                    ),
                 )
 
-                node.send_output(
-                    "follower_goal", pa.array([follower_goal]), event["metadata"]
-                )
+                node.send_output("follower_goal", logical_goal, event["metadata"])
 
         elif event_type == "ERROR":
-            print("[lcr_interpolate] error: ", event["error"])
+            print("[lcr-to-simu] error: ", event["error"])
             break
 
 

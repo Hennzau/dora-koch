@@ -17,7 +17,7 @@ from position_control.utils import (
     logical_to_physical,
     physical_to_logical,
     compute_goal_with_offset,
-    ARROW_PWM_VALUES,
+    joints_values_to_arrow,
 )
 from position_control.configure import (
     build_logical_to_physical,
@@ -73,7 +73,7 @@ def main():
 
     follower_initialized = False
 
-    follower_position = pa.scalar({}, type=ARROW_PWM_VALUES)
+    follower_position = None
 
     for event in node:
         event_type = event["type"]
@@ -82,7 +82,7 @@ def main():
             event_id = event["id"]
 
             if event_id == "leader_position":
-                leader_position = event["value"][0]
+                leader_position = event["value"]
 
                 if not follower_initialized:
                     continue
@@ -91,16 +91,14 @@ def main():
                     follower_position, leader_position, follower_control
                 )
 
-                node.send_output(
-                    "follower_goal", pa.array([physical_goal]), event["metadata"]
-                )
+                node.send_output("follower_goal", physical_goal, event["metadata"])
 
             elif event_id == "follower_position":
-                follower_position = event["value"][0]
+                follower_position = event["value"]
                 follower_initialized = True
 
         elif event_type == "ERROR":
-            print("[lcr-to-lcr] error: ", event["error"])
+            print("[replay-to-lcr] error: ", event["error"])
             break
 
 
