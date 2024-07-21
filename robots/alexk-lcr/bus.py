@@ -19,13 +19,13 @@ BAUD_RATE = 1_000_000
 TIMEOUT_MS = 1000
 
 
-def joints_values_to_arrow(joints, values):
+def joints_values_to_arrow(
+    joints: Union[list[str], np.array, pa.Array],
+    values: Union[list[int], np.array, pa.Array],
+) -> pa.StructArray:
     return pa.StructArray.from_arrays(
         arrays=[joints, values],
         names=["joints", "values"],
-        fields=None,
-        mask=None,
-        memory_pool=None,
     )
 
 

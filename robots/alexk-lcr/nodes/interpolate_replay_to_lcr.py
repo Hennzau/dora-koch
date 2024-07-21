@@ -1,24 +1,11 @@
-"""
-Interpolate LCR Node: This Dora node is used to calculates appropriate goal positions for the LCR knowing a Leader position
-and Follower position
-"""
-
 import os
 import argparse
 import json
-import time
-
-import pyarrow as pa
-import pyarrow.compute as pc
 
 from dora import Node
 
-from position_control.utils import (
-    logical_to_physical,
-    physical_to_logical,
-    compute_goal_with_offset,
-    joints_values_to_arrow,
-)
+from position_control.utils import compute_goal_with_offset
+
 from position_control.configure import (
     build_logical_to_physical,
     build_physical_to_logical,
@@ -26,7 +13,6 @@ from position_control.configure import (
 
 
 def main():
-    # Handle dynamic nodes, ask for the name of the node in the dataflow
     parser = argparse.ArgumentParser(
         description="Interpolation LCR Node: This Dora node is used to calculates appropriate goal positions for the "
         "LCR followers knowing a Leader position and Follower position."

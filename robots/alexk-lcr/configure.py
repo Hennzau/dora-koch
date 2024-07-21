@@ -1,5 +1,5 @@
 """
-LCR Auto Configure: This program is used to automatically configure the Low Cost Robot (LCR) for the user.
+LCR Configuration Tool: This program is used to automatically configure the Low Cost Robot (LCR) for the user.
 
 The program will:
 1. Disable all torque motors of provided LCR.
@@ -21,7 +21,7 @@ import pyarrow as pa
 
 from bus import DynamixelBus, TorqueMode, OperatingMode, joints_values_to_arrow
 
-from nodes.position_control.utils import physical_to_logical, logical_to_physical
+from nodes.position_control.utils import physical_to_logical
 from nodes.position_control.configure import (
     build_physical_to_logical_tables,
     build_logical_to_physical_tables,
@@ -50,17 +50,10 @@ GRIPPER = pa.array(["gripper"], type=pa.string())
 
 
 def pause():
-    """
-    Pause the program until the user presses the enter key.
-    """
     input("Press Enter to continue...")
 
 
 def configure_servos(bus: DynamixelBus):
-    """
-    Configure the servos for the LCR.
-    :param bus: DynamixelBus
-    """
     bus.write_torque_enable(
         joints_values_to_arrow(FULL_ARM, [TorqueMode.DISABLED.value] * 6)
     )

@@ -29,27 +29,17 @@ class Client:
         # Set client configuration values, raise errors if the values are not set to indicate that the motors are not
         # configured correctly
 
-        self.bus.write_torque_enable(
-            joints_values_to_arrow(self.config["joints"], self.config["torque"])
-        )
-        self.bus.write_goal_current(
-            joints_values_to_arrow(self.config["joints"], self.config["goal_current"])
-        )
+        self.bus.write_torque_enable(self.config["torque"])
+        self.bus.write_goal_current(self.config["goal_current"])
 
         time.sleep(0.1)
-        self.bus.write_position_d_gain(
-            joints_values_to_arrow(self.config["joints"], self.config["D"])
-        )
+        self.bus.write_position_d_gain(self.config["D"])
 
         time.sleep(0.1)
-        self.bus.write_position_i_gain(
-            joints_values_to_arrow(self.config["joints"], self.config["I"])
-        )
+        self.bus.write_position_i_gain(self.config["I"])
 
         time.sleep(0.1)
-        self.bus.write_position_p_gain(
-            joints_values_to_arrow(self.config["joints"], self.config["P"])
-        )
+        self.bus.write_position_p_gain(self.config["P"])
 
         self.node = Node(config["name"])
 
@@ -131,9 +121,8 @@ class Client:
 def main():
     # Handle dynamic nodes, ask for the name of the node in the dataflow
     parser = argparse.ArgumentParser(
-        description="Dynamixel Client: This node is used to represent a chain of dynamixel motors. "
-        "It can be used to read "
-        "positions, velocities, currents, and set goal positions and currents."
+        description="Dynamixel Client: This node is used to represent a chain of dynamixel motors. It can be used to "
+        "read positions, velocities, currents, and set goal positions and currents."
     )
 
     parser.add_argument(
@@ -178,40 +167,44 @@ def main():
     with open(os.environ.get("CONFIG") if args.config is None else args.config) as file:
         config = json.load(file)
 
-    joints = config.keys()
+    joints = pa.array(config.keys(), pa.string())
 
     # Create configuration
     bus = {
         "name": args.name,
         "port": port,  # (e.g. "/dev/ttyUSB0", "COM3")
         "ids": [config[joint]["id"] for joint in joints],
-        "joints": pa.array(joints, pa.string()),
+        "joints": joints,
         "models": [config[joint]["model"] for joint in joints],
-        "torque": pa.array(
-            [
-                (
-                    TorqueMode.ENABLED.value
-                    if config[joint]["torque"]
-                    else TorqueMode.DISABLED.value
-                )
-                for joint in joints
-            ],
-            type=pa.uint32(),
+        "torque": joints_values_to_arrow(
+            joints,
+            pa.array(
+                [
+                    (
+                        TorqueMode.ENABLED.value
+                        if config[joint]["torque"]
+                        else TorqueMode.DISABLED.value
+                    )
+                    for joint in joints
+                ],
+                type=pa.uint32(),
+            ),
         ),
-        "goal_current": pa.array(
-            [
-                (
-                    pa.scalar(config[joint]["goal_current"], pa.uint32())
-                    if config[joint]["goal_current"] is not None
-                    else None
-                )
-                for joint in joints
-            ],
-            type=pa.uint32(),
+        "goal_current": joints_values_to_arrow(
+            joints,
+            pa.array(
+                [config[joint]["goal_current"] for joint in joints], type=pa.uint32()
+            ),
         ),
-        "P": pa.array([config[joint]["P"] for joint in joints], type=pa.uint32()),
-        "I": pa.array([config[joint]["I"] for joint in joints], type=pa.uint32()),
-        "D": pa.array([config[joint]["D"] for joint in joints], type=pa.uint32()),
+        "P": joints_values_to_arrow(
+            joints, pa.array([config[joint]["P"] for joint in joints], type=pa.uint32())
+        ),
+        "I": joints_values_to_arrow(
+            joints, pa.array([config[joint]["I"] for joint in joints], type=pa.uint32())
+        ),
+        "D": joints_values_to_arrow(
+            joints, pa.array([config[joint]["D"] for joint in joints], type=pa.uint32())
+        ),
     }
 
     print("Dynamixel Client Configuration: ", bus, flush=True)

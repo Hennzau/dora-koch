@@ -1,12 +1,6 @@
-"""
-Interpolate LCR Node: This Dora node is used to calculates appropriate goal positions for the LCR knowing a Leader position
-and Follower position
-"""
-
 import os
 import argparse
 import json
-import time
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -14,7 +8,6 @@ import pyarrow.compute as pc
 from dora import Node
 
 from position_control.utils import (
-    logical_to_physical,
     physical_to_logical,
     joints_values_to_arrow,
 )
@@ -25,7 +18,6 @@ from position_control.configure import (
 
 
 def main():
-    # Handle dynamic nodes, ask for the name of the node in the dataflow
     parser = argparse.ArgumentParser(
         description="Interpolation LCR Node: This Dora node is used to calculates appropriate goal positions for the "
         "LCR followers knowing a Leader position and Follower position."
@@ -53,7 +45,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Check if leader-control and follower-control are set
     if not os.environ.get("LEADER_CONTROL") and args.leader_control is None:
         raise ValueError(
             "The leader control is not set. Please set the configuration of the leader in the environment variables or "

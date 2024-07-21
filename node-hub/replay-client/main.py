@@ -12,6 +12,16 @@ import pandas as pd
 from dora import Node
 
 
+def joints_values_to_arrow(joints, values):
+    return pa.StructArray.from_arrays(
+        arrays=[joints, values],
+        names=["joints", "values"],
+        fields=None,
+        mask=None,
+        memory_pool=None,
+    )
+
+
 class Client:
 
     def __init__(self, config: dict[str, any]):
@@ -53,22 +63,11 @@ class Client:
         action = self.action.iloc[self.frame]
         joints = self.joints.iloc[self.frame]
 
-        position_with_joints = pa.scalar(
-            {
-                "joints": joints,
-                "values": pa.array(action, type=pa.float32()),
-            },
-            type=pa.struct(
-                {
-                    "joints": pa.list_(pa.string()),
-                    "values": pa.list_(pa.float32()),
-                }
-            ),
-        )
+        position = joints_values_to_arrow(joints, pa.array(action, type=pa.float32()))
 
         self.frame += 1
 
-        node.send_output("position", pa.array([position_with_joints]), metadata)
+        node.send_output("position", position, metadata)
 
 
 def main():
