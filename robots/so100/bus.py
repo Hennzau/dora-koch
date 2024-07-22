@@ -5,34 +5,31 @@ import pyarrow as pa
 
 from typing import Union
 
-from scservo_sdk import (
-    PacketHandler,
-    PortHandler,
-    COMM_SUCCESS,
-    GroupSyncRead,
-    GroupSyncWrite,
-)
+from scservo_sdk import PacketHandler, PortHandler, COMM_SUCCESS, GroupSyncRead, GroupSyncWrite
 from scservo_sdk import SCS_HIBYTE, SCS_HIWORD, SCS_LOBYTE, SCS_LOWORD
 
 PROTOCOL_VERSION = 0
 BAUD_RATE = 1_000_000
 TIMEOUT_MS = 1000
 
-ARROW_PWM_VALUES = pa.struct(
-    {
-        pa.field("joints", pa.list_(pa.string())),
-        pa.field("values", pa.list_(pa.int32())),
-    }
-)
+
+def joints_values_to_arrow(
+        joints: Union[list[str], np.array, pa.Array],
+        values: Union[list[int], np.array, pa.Array],
+) -> pa.StructArray:
+    return pa.StructArray.from_arrays(
+        arrays=[joints, values],
+        names=["joints", "values"],
+    )
 
 
 class TorqueMode(enum.Enum):
-    ENABLED = 1
-    DISABLED = 0
+    ENABLED = pa.scalar(1, pa.uint32())
+    DISABLED = pa.scalar(0, pa.uint32())
 
 
 class OperatingMode(enum.Enum):
-    ONE_TURN = 0
+    ONE_TURN = pa.scalar(0, pa.uint32())
 
 
 SCS_SERIES_CONTROL_TABLE = [
@@ -79,7 +76,7 @@ SCS_SERIES_CONTROL_TABLE = [
     ("Present_Temperature", 63, 1),
     ("Status", 65, 1),
     ("Moving", 66, 1),
-    ("Present_Current", 69, 2),
+    ("Present_Current", 69, 2)
 ]
 
 MODEL_CONTROL_TABLE = {
@@ -112,7 +109,7 @@ class FeetechBus:
             for data_name, address, bytes_size in MODEL_CONTROL_TABLE[motor_model]:
                 self.motor_ctrl[pa.scalar(motor_name, pa.string())][data_name] = {
                     "addr": address,
-                    "bytes_size": bytes_size,
+                    "bytes_size": bytes_size
                 }
 
         self.port_handler = PortHandler(self.port)
@@ -130,27 +127,13 @@ class FeetechBus:
     def close(self):
         self.port_handler.closePort()
 
-    def write(
-        self, data_name: str, values: Union[pa.Scalar, pa.Array], motor_names: pa.Array
-    ):
-        motor_ids = [self.motor_ctrl[motor_name]["id"] for motor_name in motor_names]
+    def write(self, data_name: str, data: pa.StructArray):
+        motor_ids = [
+            self.motor_ctrl[motor_name]["id"] for motor_name in data.field("joints")
+        ]
 
-        if isinstance(values, pa.Scalar):
-            values = pa.array([values] * len(motor_ids), type=values.type)
-
-        motor_ids, values = (
-            [
-                motor_ids[i]
-                for i in range(len(motor_ids))
-                if values[i].as_py() is not None
-            ],
-            values.drop_null(),
-        )
-
-        if len(values) == 0:
-            return
-
-        values = values.from_buffers(pa.uint32(), len(values), values.buffers())
+        values = [np.uint32(32767 - value.as_py()) if value < 0 else np.uint32(value.as_py()) for value in
+                  data.field("values")]
 
         group_key = f"{data_name}_" + "_".join([str(idx) for idx in motor_ids])
 
@@ -170,7 +153,8 @@ class FeetechBus:
             )
 
         for idx, value in zip(motor_ids, values):
-            value = value.as_py()
+            if value is None:
+                continue
 
             if packet_bytes_size == 1:
                 data = [
@@ -206,11 +190,7 @@ class FeetechBus:
                 f"{self.packet_handler.getTxRxResult(comm)}"
             )
 
-    def read(self, data_name: str, motor_names: pa.Array) -> pa.Scalar:
-        """
-        You should use this method only if the motors you selected have the same address and bytes size for the data you want to read.
-        """
-
+    def read(self, data_name: str, motor_names: pa.Array) -> pa.StructArray:
         motor_ids = [self.motor_ctrl[motor_name]["id"] for motor_name in motor_names]
 
         group_key = f"{data_name}_" + "_".join([str(idx) for idx in motor_ids])
@@ -238,69 +218,41 @@ class FeetechBus:
                 f"{self.packet_handler.getTxRxResult(comm)}"
             )
 
-        values = []
-        for idx in motor_ids:
-            value = pa.scalar(
+        numpy_values = np.array(
+            [
                 self.group_readers[group_key].getData(
                     idx, packet_address, packet_bytes_size
-                ),
-                type=pa.uint32(),
-            )
-            values.append(value)
-
-        values = pa.array(values, type=pa.uint32())
-        values = values.from_buffers(pa.int32(), len(values), values.buffers())
-
-        return pa.scalar({"joints": motor_names, "values": values}, ARROW_PWM_VALUES)
-
-    def write_torque_enable(
-        self, torque_mode: Union[TorqueMode, list[TorqueMode]], motor_names: pa.Array
-    ):
-        self.write(
-            "Torque_Enable",
-            (
-                pa.scalar(torque_mode.value, pa.int32())
-                if isinstance(torque_mode, TorqueMode)
-                else pa.array([mode.value for mode in torque_mode], pa.int32())
-            ),
-            motor_names,
+                )
+                for idx in motor_ids
+            ],
+            dtype=np.uint32,
         )
 
-    def write_operating_mode(
-        self,
-        operating_mode: Union[OperatingMode, list[OperatingMode]],
-        motor_names: pa.Array,
-    ):
-        self.write(
-            "Mode",
-            (
-                pa.scalar(operating_mode.value, pa.int32())
-                if isinstance(operating_mode, OperatingMode)
-                else pa.array([mode.value for mode in operating_mode], pa.int32())
-            ),
-            motor_names,
-        )
+        values = np.array([np.int32(value) if value < 32767 else np.int32(32767 - value) for value in numpy_values],
+                          dtype=np.int32)
 
-    def read_position(self, motor_names: pa.Array) -> pa.Scalar:
+        return joints_values_to_arrow(motor_names, values)
+
+    def write_torque_enable(self, torque_mode: pa.StructArray):
+        self.write("Torque_Enable", torque_mode)
+
+    def write_operating_mode(self, operating_mode: pa.StructArray):
+        self.write("Mode", operating_mode)
+
+    def read_position(self, motor_names: pa.Array) -> pa.StructArray:
         return self.read("Present_Position", motor_names)
 
-    def read_velocity(self, motor_names: pa.Array) -> pa.Scalar:
-        return self.read("Present_Speed", motor_names)
+    def read_velocity(self, motor_names: pa.Array) -> pa.StructArray:
+        return self.read("Present_Velocity", motor_names)
 
-    def read_current(self, motor_names: pa.Array) -> pa.Scalar:
+    def read_current(self, motor_names: pa.Array) -> pa.StructArray:
         return self.read("Present_Current", motor_names)
 
-    def write_goal_position(
-        self, goal_position: Union[pa.Scalar, pa.Scalar], motor_names: pa.Array
-    ):
-        self.write("Goal_Position", goal_position, motor_names)
+    def write_goal_position(self, goal_position: pa.StructArray):
+        self.write("Goal_Position", goal_position)
 
-    def write_max_angle_limit(
-        self, max_angle_limit: Union[np.uint32, np.array], motor_names: np.array
-    ):
-        self.write("Max_Angle_Limit", max_angle_limit, motor_names)
+    def write_max_angle_limit(self, max_angle_limit: pa.StructArray):
+        self.write("Max_Angle_Limit", max_angle_limit)
 
-    def write_min_angle_limit(
-        self, min_angle_limit: Union[np.uint32, np.array], motor_names: np.array
-    ):
-        self.write("Min_Angle_Limit", min_angle_limit, motor_names)
+    def write_min_angle_limit(self, min_angle_limit: pa.StructArray):
+        self.write("Min_Angle_Limit", min_angle_limit)

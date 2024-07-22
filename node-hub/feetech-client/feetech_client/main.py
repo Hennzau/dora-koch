@@ -11,7 +11,7 @@ import pyarrow as pa
 
 from dora import Node
 
-from .bus import FeetechBus, TorqueMode
+from .bus import FeetechBus, TorqueMode, joints_values_to_arrow
 
 
 class Client:
@@ -28,7 +28,7 @@ class Client:
         # Set client configuration values and raise errors if the values are not set to indicate that the motors are not
         # configured correctly
 
-        self.bus.write_torque_enable(config["torque"], self.config["joints"])
+        self.bus.write_torque_enable(self.config["torque"])
 
         self.node = Node(config["name"])
 
@@ -60,7 +60,7 @@ class Client:
         try:
             node.send_output(
                 "position",
-                pa.array([self.bus.read_position(self.config["joints"])]),
+                self.bus.read_position(self.config["joints"]),
                 metadata,
             )
 
@@ -71,7 +71,7 @@ class Client:
         try:
             node.send_output(
                 "velocity",
-                pa.array([self.bus.read_velocity(self.config["joints"])]),
+                self.bus.read_velocity(self.config["joints"]),
                 metadata,
             )
         except ConnectionError as e:
@@ -81,18 +81,15 @@ class Client:
         try:
             node.send_output(
                 "current",
-                pa.array([self.bus.read_current(self.config["joints"])]),
+                self.bus.read_current(self.config["joints"]),
                 metadata,
             )
         except ConnectionError as e:
             print("Error reading current:", e)
 
-    def write_goal_position(self, goal_position: pa.Array):
+    def write_goal_position(self, goal_position: pa.StructArray):
         try:
-            joints = goal_position[0]["joints"].values
-            goal_position = goal_position[0]["values"].values
-
-            self.bus.write_goal_position(goal_position, joints)
+            self.bus.write_goal_position(goal_position)
         except ConnectionError as e:
             print("Error writing goal position:", e)
 
@@ -101,8 +98,8 @@ def main():
     # Handle dynamic nodes, ask for the name of the node in the dataflow
     parser = argparse.ArgumentParser(
         description="Feetech Client: This node is used to represent a chain of feetech motors. "
-        "It can be used to read "
-        "positions, velocities, currents, and set goal positions and currents."
+                    "It can be used to read "
+                    "positions, velocities, currents, and set goal positions and currents."
     )
 
     parser.add_argument(
@@ -156,10 +153,20 @@ def main():
         "ids": [config[joint]["id"] for joint in joints],
         "joints": pa.array(joints, pa.string()),
         "models": [config[joint]["model"] for joint in joints],
-        "torque": [
-            TorqueMode.ENABLED if config[joint]["torque"] else TorqueMode.DISABLED
-            for joint in joints
-        ],
+        "torque": joints_values_to_arrow(
+            pa.array(config.keys(), pa.string()),
+            pa.array(
+                [
+                    (
+                        TorqueMode.ENABLED.value
+                        if config[joint]["torque"]
+                        else TorqueMode.DISABLED.value
+                    )
+                    for joint in joints
+                ],
+                type=pa.uint32(),
+            ),
+        ),
     }
 
     print("Feetech Client Configuration: ", bus, flush=True)

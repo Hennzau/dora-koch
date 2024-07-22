@@ -19,7 +19,7 @@ import json
 
 import pyarrow as pa
 
-from bus import FeetechBus, TorqueMode, OperatingMode
+from bus import FeetechBus, TorqueMode, OperatingMode, joints_values_to_arrow
 from nodes.position_control.utils import physical_to_logical, logical_to_physical
 from nodes.position_control.configure import (
     build_physical_to_logical_tables,
@@ -49,28 +49,33 @@ GRIPPER = pa.array(["gripper"], type=pa.string())
 
 
 def pause():
-    """
-    Pause the program until the user presses the enter key.
-    """
     input("Press Enter to continue...")
 
 
 def configure_servos(bus: FeetechBus):
-    """
-    Configure the servos for the LCR.
-    :param bus: FeetechBus
-    """
+    bus.write_torque_enable(
+        joints_values_to_arrow(FULL_ARM, [TorqueMode.DISABLED.value] * 6)
+    )
 
-    bus.write_torque_enable(TorqueMode.DISABLED, FULL_ARM)
-    bus.write_operating_mode(OperatingMode.ONE_TURN, FULL_ARM)
-    bus.write_min_angle_limit(pa.scalar(0, pa.uint32()), FULL_ARM)
-    bus.write_max_angle_limit(pa.scalar(0, pa.uint32()), FULL_ARM)
+    bus.write_operating_mode(
+        joints_values_to_arrow(
+            FULL_ARM, [OperatingMode.ONE_TURN.value] * 6
+        )
+    )
+
+    bus.write_max_angle_limit(
+        joints_values_to_arrow(FULL_ARM, [pa.scalar(0, pa.uint32())] * 6)
+    )
+
+    bus.write_min_angle_limit(
+        joints_values_to_arrow(FULL_ARM, [pa.scalar(0, pa.uint32())] * 6)
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="SO100 Auto Configure: This program is used to automatically configure the Low Cost Robot (SO100) "
-        "for the user."
+                    "for the user."
     )
 
     parser.add_argument(
@@ -157,10 +162,10 @@ def main():
 
     left = "left" if args.left else "right"
     path = (
-        input(
-            f"Please enter the path of the configuration file (default is ./robots/so100/configs/follower.{left}.json): "
-        )
-        or f"./robots/so100/configs/follower.{left}.json"
+            input(
+                f"Please enter the path of the configuration file (default is ./robots/so100/configs/follower.{left}.json): "
+            )
+            or f"./robots/so100/configs/follower.{left}.json"
     )
 
     with open(path, "w") as file:

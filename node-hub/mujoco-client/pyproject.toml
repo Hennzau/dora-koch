@@ -5,9 +5,7 @@ authors = ["Hennzau <dev@enzo-le-van.fr>"]
 description = "Dora Node client for mujoco simulated robots."
 readme = "README.md"
 
-packages = [
-    { include = "main.py", to = "mujoco_client" }
-]
+packages = [{ include = "mujoco_client" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"

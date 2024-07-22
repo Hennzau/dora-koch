@@ -5,10 +5,7 @@ authors = ["Hennzau <dev@enzo-le-van.fr>"]
 description = "Dora Node client for dynamixel motors."
 readme = "README.md"
 
-packages = [
-    { include = "main.py", to = "dynamixel_client" },
-    { include = "bus.py", to = "dynamixel_client" },
-]
+packages = [{ include = "dynamixel_client" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"

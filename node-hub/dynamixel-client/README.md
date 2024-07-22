@@ -49,8 +49,8 @@ node.send_output("output_name", arrow_struct, None)
 # Receive the StructArray from the dataflow
 event = node.next()
 arrow_struct = event["value"]
-joints = arrow_struct.field("joints") # PyArrow Array of Strings
-values = arrow_struct.field("values") # PyArrow Array of Int32/Uint32/Float32...
+joints = arrow_struct.field("joints")  # PyArrow Array of Strings
+values = arrow_struct.field("values")  # PyArrow Array of Int32/Uint32/Float32...
 ```
 
 ### Inputs

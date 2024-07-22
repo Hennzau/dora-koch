@@ -8,9 +8,7 @@ authors = [
 description = "Dora Node for capturing video with OpenCV"
 readme = "README.md"
 
-packages = [
-    { include = "main.py", to = "opencv_video_capture" }
-]
+packages = [{ include = "opencv_video_capture" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"

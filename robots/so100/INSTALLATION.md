@@ -59,13 +59,16 @@ Finally, install the required Python packages by running the following command:
 pip install -r robots/so100/requirements.txt # You **MUST** be inside dora-lerobot to run this command, not robots/so100
 ```
 
+If you want to install the required Python packages in development mode, you can run the following command, but you will
+have to avoid using `dora build` during execution procedure:
+
+```bash
+pip install -r robots/alexk-lcr/development.txt # You **MUST** be inside dora-lerobot to run this command, not robots/alexk-lcr
+```
+
 **Note**: You're totally free to use your own Python environment, a Conda environment, or whatever you prefer, you will
 have to activate
 your custom python environment before running `dora up && dora start [graph].yml`.
-
-**Note**: If you want to install only the packages for 1 dora application (e.g. `record_mono_teleop_real.yml`), you can
-skip the two last steps and install the required packages by running the `dora build` command for the desired
-application. (see **Examples**)
 
 In order to record episodes, you need ffmpeg installed on your system. You can download it from
 the [official website](https://ffmpeg.org/download.html). If you're on Windows, you can download the latest build

@@ -59,6 +59,13 @@ Finally, install the required Python packages by running the following command:
 pip install -r robots/alexk-lcr/requirements.txt # You **MUST** be inside dora-lerobot to run this command, not robots/alexk-lcr
 ```
 
+If you want to install the required Python packages in development mode, you can run the following command, but you will
+have to avoid using `dora build` during execution procedure:
+
+```bash
+pip install -r robots/alexk-lcr/development.txt # You **MUST** be inside dora-lerobot to run this command, not robots/alexk-lcr
+```
+
 **Note**: You're totally free to use your own Python environment, a Conda environment, or whatever you prefer, you will
 have to activate
 your custom python environment before running `dora up && dora start [graph].yml`.

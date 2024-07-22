@@ -5,9 +5,7 @@ authors = ["Hennzau <dev@enzo-le-van.fr>"]
 description = "Dora Node for video encoding (LeRobot compatible)."
 readme = "README.md"
 
-packages = [
-    { include = "main.py", to = "video_encoder" }
-]
+packages = [{ include = "video_encoder" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
