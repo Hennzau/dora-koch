@@ -70,7 +70,7 @@ class Client:
         self.bus.write_torque_enable(
             joints_values_to_arrow(
                 self.config["joints"],
-                [TorqueMode.DISABLED] * len(self.config["joints"]),
+                [TorqueMode.DISABLED.value] * len(self.config["joints"]),
             )
         )
 
@@ -167,17 +167,17 @@ def main():
     with open(os.environ.get("CONFIG") if args.config is None else args.config) as file:
         config = json.load(file)
 
-    joints = pa.array(config.keys(), pa.string())
+    joints = config.keys()
 
     # Create configuration
     bus = {
         "name": args.name,
         "port": port,  # (e.g. "/dev/ttyUSB0", "COM3")
         "ids": [config[joint]["id"] for joint in joints],
-        "joints": joints,
+        "joints": pa.array(config.keys(), pa.string()),
         "models": [config[joint]["model"] for joint in joints],
         "torque": joints_values_to_arrow(
-            joints,
+            pa.array(config.keys(), pa.string()),
             pa.array(
                 [
                     (
@@ -191,19 +191,19 @@ def main():
             ),
         ),
         "goal_current": joints_values_to_arrow(
-            joints,
+            pa.array(config.keys(), pa.string()),
             pa.array(
                 [config[joint]["goal_current"] for joint in joints], type=pa.uint32()
             ),
         ),
         "P": joints_values_to_arrow(
-            joints, pa.array([config[joint]["P"] for joint in joints], type=pa.uint32())
+            pa.array(config.keys(), pa.string()), pa.array([config[joint]["P"] for joint in joints], type=pa.uint32())
         ),
         "I": joints_values_to_arrow(
-            joints, pa.array([config[joint]["I"] for joint in joints], type=pa.uint32())
+            pa.array(config.keys(), pa.string()), pa.array([config[joint]["I"] for joint in joints], type=pa.uint32())
         ),
         "D": joints_values_to_arrow(
-            joints, pa.array([config[joint]["D"] for joint in joints], type=pa.uint32())
+            pa.array(config.keys(), pa.string()), pa.array([config[joint]["D"] for joint in joints], type=pa.uint32())
         ),
     }
 

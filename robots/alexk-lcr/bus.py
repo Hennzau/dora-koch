@@ -20,8 +20,8 @@ TIMEOUT_MS = 1000
 
 
 def joints_values_to_arrow(
-    joints: Union[list[str], np.array, pa.Array],
-    values: Union[list[int], np.array, pa.Array],
+        joints: Union[list[str], np.array, pa.Array],
+        values: Union[list[int], np.array, pa.Array],
 ) -> pa.StructArray:
     return pa.StructArray.from_arrays(
         arrays=[joints, values],
@@ -30,16 +30,16 @@ def joints_values_to_arrow(
 
 
 class TorqueMode(enum.Enum):
-    ENABLED = 1
-    DISABLED = 0
+    ENABLED = pa.scalar(1, pa.uint32())
+    DISABLED = pa.scalar(0, pa.uint32())
 
 
 class OperatingMode(enum.Enum):
-    VELOCITY = 1
-    POSITION = 3
-    EXTENDED_POSITION = 4
-    CURRENT_CONTROLLED_POSITION = 5
-    PWM = 16
+    VELOCITY = pa.scalar(1, pa.uint32())
+    POSITION = pa.scalar(3, pa.uint32())
+    EXTENDED_POSITION = pa.scalar(4, pa.uint32())
+    CURRENT_CONTROLLED_POSITION = pa.scalar(5, pa.uint32())
+    PWM = pa.scalar(16, pa.uint32())
 
 
 X_SERIES_CONTROL_TABLE = [

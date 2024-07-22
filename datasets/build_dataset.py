@@ -226,7 +226,7 @@ def main():
 
     # only keep the array of positions for each action abd state
     arrow_struct = pa.StructArray.from_pandas(dataset["action"][0])
-    joints = arrow_struct.field("joints")
+    joints = arrow_struct.field("joints").to_numpy(zero_copy_only=False)
 
     def get_values(x):
         arrow_x = pa.StructArray.from_pandas(x)

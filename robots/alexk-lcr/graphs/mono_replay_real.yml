@@ -8,7 +8,7 @@ nodes:
       - position
       - end
     env:
-      PATH: ../../../datasets/enzo2
+      PATH: ../../../datasets/enzo1
       EPISODE: 1
 
   - id: replay-to-lcr

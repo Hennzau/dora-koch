@@ -1,18 +1,18 @@
 nodes:
   - id: replay-client
-    build: pip install ../../../node-hub/replay-client
-    path: ../../../node-hub/replay-client/main.py
+    build: pip install ../../../../node-hub/replay-client
+    path: ../../../../node-hub/replay-client/main.py
     inputs:
       pull_position: dora/timer/millis/33
     outputs:
       - position
       - end
     env:
-      PATH: ../../../datasets/enzo2
+      PATH: ../../../../datasets/enzo2
       EPISODE: 1
 
   - id: replay-to-lcr
-    path: ../nodes/interpolate_replay_to_lcr.py
+    path: ../../nodes/interpolate_replay_to_lcr.py
     inputs:
       leader_position:
         source: replay-client/position
@@ -23,11 +23,11 @@ nodes:
     outputs:
       - follower_goal
     env:
-      FOLLOWER_CONTROL: ../configs/follower.left.json
+      FOLLOWER_CONTROL: ../../configs/follower.left.json
 
   - id: lcr-follower
-    build: pip install ../../../node-hub/dynamixel-client
-    path: ../../../node-hub/dynamixel-client/main.py
+    build: pip install ../../../../node-hub/dynamixel-client
+    path: ../../../../node-hub/dynamixel-client/main.py
     inputs:
       pull_position: dora/timer/millis/33
       write_goal_position: replay-to-lcr/follower_goal
@@ -36,4 +36,4 @@ nodes:
       - position
     env:
       PORT: /dev/tty.usbmodem575E0031141
-      CONFIG: ../configs/follower.left.json
+      CONFIG: ../../configs/follower.left.json

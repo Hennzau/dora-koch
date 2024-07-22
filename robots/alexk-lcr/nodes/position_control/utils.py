@@ -32,8 +32,8 @@ def physical_to_logical(physical_position: pa.StructArray, table: {}) -> pa.Stru
 
 
 def logical_to_physical(logical_position: pa.StructArray, table: {}) -> pa.StructArray:
-    joints = physical_position.field("joints")
-    positions = physical_position.field("values")
+    joints = logical_position.field("joints")
+    positions = logical_position.field("values")
 
     result = []
 
@@ -57,7 +57,7 @@ def logical_to_physical(logical_position: pa.StructArray, table: {}) -> pa.Struc
 
 
 def compute_goal_with_offset(
-    physical_position: pa.StructArray, logical_goal: pa.StructArray, table: {}
+        physical_position: pa.StructArray, logical_goal: pa.StructArray, table: {}
 ):
     joints = physical_position.field("joints")
 
@@ -68,7 +68,7 @@ def compute_goal_with_offset(
     return joints_values_to_arrow(
         joints,
         pc.add(
-            pc.subtract(physical_position["values"].values, base["values"].values),
-            goal["values"].values,
+            pc.subtract(physical_position.field("values"), base.field("values")),
+            goal.field("values"),
         ),
     )

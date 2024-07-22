@@ -1,7 +1,7 @@
 nodes:
   - id: lcr-leader
-    build: pip install ../../../node-hub/dynamixel-client
-    path: ../../../node-hub/dynamixel-client/main.py
+    build: pip install ../../../../node-hub/dynamixel-client
+    path: ../../../../node-hub/dynamixel-client/main.py
     inputs:
       pull_position:
         source: lerobot-dashboard/tick
@@ -12,10 +12,10 @@ nodes:
       - position
     env:
       PORT: /dev/tty.usbmodem575E0030111
-      CONFIG: ../configs/leader.left.json
+      CONFIG: ../../configs/leader.left.json
 
   - id: lcr-to-lcr
-    path: ../nodes/interpolate_lcr_to_lcr.py
+    path: ../../nodes/interpolate_lcr_to_lcr.py
     inputs:
       leader_position:
         source: lcr-leader/position
@@ -27,11 +27,11 @@ nodes:
       - follower_goal
       - leader_goal
     env:
-      LEADER_CONTROL: ../configs/leader.left.json
-      FOLLOWER_CONTROL: ../configs/follower.left.json
+      LEADER_CONTROL: ../../configs/leader.left.json
+      FOLLOWER_CONTROL: ../../configs/follower.left.json
 
   - id: lcr-to-record
-    path: ../nodes/interpolate_lcr_to_record.py
+    path: ../../nodes/interpolate_lcr_to_record.py
     inputs:
       leader_position:
         source: lcr-leader/position
@@ -43,12 +43,12 @@ nodes:
       - logical_goal
       - logical_position
     env:
-      LEADER_CONTROL: ../configs/leader.left.json
-      FOLLOWER_CONTROL: ../configs/follower.left.json
+      LEADER_CONTROL: ../../configs/leader.left.json
+      FOLLOWER_CONTROL: ../../configs/follower.left.json
 
   - id: lcr-follower
-    build: pip install ../../../node-hub/dynamixel-client
-    path: ../../../node-hub/dynamixel-client/main.py
+    build: pip install ../../../../node-hub/dynamixel-client
+    path: ../../../../node-hub/dynamixel-client/main.py
     inputs:
       pull_position:
         source: lerobot-dashboard/tick
@@ -61,11 +61,11 @@ nodes:
       - position
     env:
       PORT: /dev/tty.usbmodem575E0031141
-      CONFIG: ../configs/follower.left.json
+      CONFIG: ../../configs/follower.left.json
 
   - id: opencv-video-capture
-    build: pip install ../../../node-hub/opencv-video-capture
-    path: ../../../node-hub/opencv-video-capture/main.py
+    build: pip install ../../../../node-hub/opencv-video-capture
+    path: ../../../../node-hub/opencv-video-capture/main.py
     inputs:
       tick:
         source: lerobot-dashboard/tick
@@ -78,8 +78,8 @@ nodes:
       IMAGE_HEIGHT: 540
 
   - id: video-encoder
-    build: pip install ../../../node-hub/video-encoder
-    path: ../../../node-hub/video-encoder/main.py
+    build: pip install ../../../../node-hub/video-encoder
+    path: ../../../../node-hub/video-encoder/main.py
     inputs:
       image: opencv-video-capture/image
       episode_index: lerobot-dashboard/episode
@@ -90,8 +90,8 @@ nodes:
       FPS: 30
 
   - id: lerobot-dashboard
-    build: pip install ../../../node-hub/lerobot-dashboard
-    path: ../../../node-hub/lerobot-dashboard/main.py
+    build: pip install ../../../../node-hub/lerobot-dashboard
+    path: ../../../../node-hub/lerobot-dashboard/main.py
     inputs:
       tick:
         source: dora/timer/millis/16

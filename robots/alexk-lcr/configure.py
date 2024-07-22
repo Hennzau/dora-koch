@@ -65,7 +65,7 @@ def configure_servos(bus: DynamixelBus):
     )
 
     bus.write_operating_mode(
-        joints_values_to_arrow(GRIPPER, [OperatingMode.EXTENDED_POSITION.value])
+        joints_values_to_arrow(GRIPPER, [OperatingMode.CURRENT_CONTROLLED_POSITION.value])
     )
 
 
@@ -200,9 +200,9 @@ def main():
 
     while True:
         base_physical_position = arm.read_position(FULL_ARM)
-        logical_position = physical_to_logical(base_physical_position, control_table)
+        logical_position = physical_to_logical(base_physical_position, control_table).field("values")
 
-        print(f"Logical Position: {logical_position["values"]}")
+        print(f"Logical Position: {logical_position}")
 
         time.sleep(0.5)
 

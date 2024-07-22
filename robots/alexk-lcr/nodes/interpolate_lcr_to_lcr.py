@@ -22,7 +22,7 @@ from position_control.configure import (
 def main():
     parser = argparse.ArgumentParser(
         description="Interpolation LCR Node: This Dora node is used to calculates appropriate goal positions for the "
-        "LCR followers knowing a Leader position and Follower position."
+                    "LCR followers knowing a Leader position and Follower position."
     )
 
     parser.add_argument(
@@ -60,16 +60,16 @@ def main():
         )
 
     with open(
-        os.environ.get("LEADER_CONTROL")
-        if args.leader_control is None
-        else args.leader_control
+            os.environ.get("LEADER_CONTROL")
+            if args.leader_control is None
+            else args.leader_control
     ) as file:
         leader_control = json.load(file)
 
     with open(
-        os.environ.get("FOLLOWER_CONTROL")
-        if args.follower_control is None
-        else args.follower_control
+            os.environ.get("FOLLOWER_CONTROL")
+            if args.follower_control is None
+            else args.follower_control
     ) as file:
         follower_control = json.load(file)
 
