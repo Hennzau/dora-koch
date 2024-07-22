@@ -98,8 +98,8 @@ def main():
     # Handle dynamic nodes, ask for the name of the node in the dataflow
     parser = argparse.ArgumentParser(
         description="Feetech Client: This node is used to represent a chain of feetech motors. "
-                    "It can be used to read "
-                    "positions, velocities, currents, and set goal positions and currents."
+        "It can be used to read "
+        "positions, velocities, currents, and set goal positions and currents."
     )
 
     parser.add_argument(

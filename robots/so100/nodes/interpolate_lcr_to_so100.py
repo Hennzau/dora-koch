@@ -1,12 +1,6 @@
-"""
-Interpolate LCR Node: This Dora node is used to calculates appropriate goal positions for the LCR knowing a Leader position
-and Follower position
-"""
-
 import os
 import argparse
 import json
-import time
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -14,11 +8,9 @@ import pyarrow.compute as pc
 from dora import Node
 
 from position_control.utils import (
-    logical_to_physical,
     physical_to_logical,
     compute_goal_with_offset,
-    ARROW_LOGICAL_VALUES,
-    ARROW_PWM_VALUES,
+    joints_values_to_arrow,
 )
 from position_control.configure import (
     build_logical_to_physical,
@@ -97,18 +89,9 @@ def main():
             follower_control[joint]["logical_to_physical"]
         )
 
-    logical_leader_goal = pa.scalar(
-        {
-            "joints": pa.array(leader_control.keys(), type=pa.string()),
-            "values": pa.array(
-                [
-                    leader_control[joint]["goal_position"]
-                    for joint in leader_control.keys()
-                ],
-                type=pa.float32(),
-            ),
-        },
-        type=ARROW_LOGICAL_VALUES,
+    logical_leader_initial_goal = joints_values_to_arrow(
+        leader_control.keys(),
+        [leader_control[joint]["goal_position"] for joint in leader_control.keys()],
     )
 
     node = Node(args.name)
@@ -116,7 +99,7 @@ def main():
     leader_initialized = False
     follower_initialized = False
 
-    follower_position = pa.scalar({}, type=ARROW_PWM_VALUES)
+    follower_position = None
 
     for event in node:
         event_type = event["type"]
@@ -131,12 +114,10 @@ def main():
                     leader_initialized = True
 
                     physical_goal = compute_goal_with_offset(
-                        leader_position, logical_leader_goal, leader_control
+                        leader_position, logical_leader_initial_goal, leader_control
                     )
 
-                    node.send_output(
-                        "leader_goal", pa.array([physical_goal]), event["metadata"]
-                    )
+                    node.send_output("leader_goal", physical_goal, event["metadata"])
 
                 if not follower_initialized:
                     continue
@@ -144,23 +125,17 @@ def main():
                 leader_position = physical_to_logical(leader_position, leader_control)
 
                 interpolation = pa.array([1, 1, 1, 1, 1, 700 / 450], type=pa.float32())
-                leader_position = pa.scalar(
-                    {
-                        "joints": leader_position["joints"].values,
-                        "values": pa.array(
-                            pc.multiply(leader_position["values"].values, interpolation)
-                        ),
-                    },
-                    type=ARROW_LOGICAL_VALUES,
+
+                logical_goal = joints_values_to_arrow(
+                    leader_position.field("joints"),
+                    pc.multiply(leader_position.field("values"), interpolation),
                 )
 
                 physical_goal = compute_goal_with_offset(
-                    follower_position, leader_position, follower_control
+                    follower_position, logical_goal, follower_control
                 )
 
-                node.send_output(
-                    "follower_goal", pa.array([physical_goal]), event["metadata"]
-                )
+                node.send_output("follower_goal", physical_goal, event["metadata"])
 
             elif event_id == "follower_position":
                 follower_position = event["value"][0]

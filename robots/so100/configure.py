@@ -58,9 +58,7 @@ def configure_servos(bus: FeetechBus):
     )
 
     bus.write_operating_mode(
-        joints_values_to_arrow(
-            FULL_ARM, [OperatingMode.ONE_TURN.value] * 6
-        )
+        joints_values_to_arrow(FULL_ARM, [OperatingMode.ONE_TURN.value] * 6)
     )
 
     bus.write_max_angle_limit(
@@ -75,7 +73,7 @@ def configure_servos(bus: FeetechBus):
 def main():
     parser = argparse.ArgumentParser(
         description="SO100 Auto Configure: This program is used to automatically configure the Low Cost Robot (SO100) "
-                    "for the user."
+        "for the user."
     )
 
     parser.add_argument(
@@ -162,10 +160,10 @@ def main():
 
     left = "left" if args.left else "right"
     path = (
-            input(
-                f"Please enter the path of the configuration file (default is ./robots/so100/configs/follower.{left}.json): "
-            )
-            or f"./robots/so100/configs/follower.{left}.json"
+        input(
+            f"Please enter the path of the configuration file (default is ./robots/so100/configs/follower.{left}.json): "
+        )
+        or f"./robots/so100/configs/follower.{left}.json"
     )
 
     with open(path, "w") as file:

@@ -5,7 +5,13 @@ import pyarrow as pa
 
 from typing import Union
 
-from scservo_sdk import PacketHandler, PortHandler, COMM_SUCCESS, GroupSyncRead, GroupSyncWrite
+from scservo_sdk import (
+    PacketHandler,
+    PortHandler,
+    COMM_SUCCESS,
+    GroupSyncRead,
+    GroupSyncWrite,
+)
 from scservo_sdk import SCS_HIBYTE, SCS_HIWORD, SCS_LOBYTE, SCS_LOWORD
 
 PROTOCOL_VERSION = 0
@@ -14,8 +20,8 @@ TIMEOUT_MS = 1000
 
 
 def joints_values_to_arrow(
-        joints: Union[list[str], np.array, pa.Array],
-        values: Union[list[int], np.array, pa.Array],
+    joints: Union[list[str], np.array, pa.Array],
+    values: Union[list[int], np.array, pa.Array],
 ) -> pa.StructArray:
     return pa.StructArray.from_arrays(
         arrays=[joints, values],
@@ -76,7 +82,7 @@ SCS_SERIES_CONTROL_TABLE = [
     ("Present_Temperature", 63, 1),
     ("Status", 65, 1),
     ("Moving", 66, 1),
-    ("Present_Current", 69, 2)
+    ("Present_Current", 69, 2),
 ]
 
 MODEL_CONTROL_TABLE = {
@@ -109,7 +115,7 @@ class FeetechBus:
             for data_name, address, bytes_size in MODEL_CONTROL_TABLE[motor_model]:
                 self.motor_ctrl[pa.scalar(motor_name, pa.string())][data_name] = {
                     "addr": address,
-                    "bytes_size": bytes_size
+                    "bytes_size": bytes_size,
                 }
 
         self.port_handler = PortHandler(self.port)
@@ -132,8 +138,10 @@ class FeetechBus:
             self.motor_ctrl[motor_name]["id"] for motor_name in data.field("joints")
         ]
 
-        values = [np.uint32(32767 - value.as_py()) if value < 0 else np.uint32(value.as_py()) for value in
-                  data.field("values")]
+        values = [
+            np.uint32(32767 - value.as_py()) if value < 0 else np.uint32(value.as_py())
+            for value in data.field("values")
+        ]
 
         group_key = f"{data_name}_" + "_".join([str(idx) for idx in motor_ids])
 
@@ -228,8 +236,13 @@ class FeetechBus:
             dtype=np.uint32,
         )
 
-        values = np.array([np.int32(value) if value < 32767 else np.int32(32767 - value) for value in numpy_values],
-                          dtype=np.int32)
+        values = np.array(
+            [
+                np.int32(value) if value < 32767 else np.int32(32767 - value)
+                for value in numpy_values
+            ],
+            dtype=np.int32,
+        )
 
         return joints_values_to_arrow(motor_names, values)
 

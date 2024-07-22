@@ -18,23 +18,32 @@ def build_physical_to_logical(table: {str: int}):
 
     ninety_to_one_eighty = select_limits_physical_to_logical(table["90"], table["180"])
 
-    one_eighty_to_two_seventy = select_limits_physical_to_logical(table["180"], table["270"])
+    one_eighty_to_two_seventy = select_limits_physical_to_logical(
+        table["180"], table["270"]
+    )
 
     two_seventy_to_zero = select_limits_physical_to_logical(table["270"], table["360"])
 
     def physical_to_logical_converter(x):
         if 0 <= x < 90:
-            return zero_to_ninety[0] + (x / 90) * (zero_to_ninety[1] - zero_to_ninety[0])
+            return zero_to_ninety[0] + (x / 90) * (
+                zero_to_ninety[1] - zero_to_ninety[0]
+            )
 
         if 90 <= x < 180:
-            return ninety_to_one_eighty[0] + ((x - 90) / 90) * (ninety_to_one_eighty[1] - ninety_to_one_eighty[0])
+            return ninety_to_one_eighty[0] + ((x - 90) / 90) * (
+                ninety_to_one_eighty[1] - ninety_to_one_eighty[0]
+            )
 
         if 180 <= x < 270:
             return one_eighty_to_two_seventy[0] + ((x - 180) / 90) * (
-                    one_eighty_to_two_seventy[1] - one_eighty_to_two_seventy[0])
+                one_eighty_to_two_seventy[1] - one_eighty_to_two_seventy[0]
+            )
 
         if 270 <= x <= 360:
-            return two_seventy_to_zero[0] + ((x - 270) / 90) * (two_seventy_to_zero[1] - two_seventy_to_zero[0])
+            return two_seventy_to_zero[0] + ((x - 270) / 90) * (
+                two_seventy_to_zero[1] - two_seventy_to_zero[0]
+            )
 
         else:
             return 0
@@ -54,31 +63,42 @@ def build_logical_to_physical(table: {str: int}):
     def logical_to_physical_function(x):
         if -180 <= x < -90:
             return minus_one_eighty_to_minus_ninety[0] + ((x + 180) / 90) * (
-                    minus_one_eighty_to_minus_ninety[1] - minus_one_eighty_to_minus_ninety[0])
+                minus_one_eighty_to_minus_ninety[1]
+                - minus_one_eighty_to_minus_ninety[0]
+            )
 
         if -90 <= x < 0:
             return minus_ninety_to_zero[0] + ((x + 90) / 90) * (
-                    minus_ninety_to_zero[1] - minus_ninety_to_zero[0])
+                minus_ninety_to_zero[1] - minus_ninety_to_zero[0]
+            )
 
         if 0 <= x < 90:
-            return zero_to_ninety[0] + (x / 90) * (zero_to_ninety[1] - zero_to_ninety[0])
+            return zero_to_ninety[0] + (x / 90) * (
+                zero_to_ninety[1] - zero_to_ninety[0]
+            )
 
         if 90 <= x <= 180:
-            return ninety_to_one_eighty[0] + ((x - 90) / 90) * (ninety_to_one_eighty[1] - ninety_to_one_eighty[0])
+            return ninety_to_one_eighty[0] + ((x - 90) / 90) * (
+                ninety_to_one_eighty[1] - ninety_to_one_eighty[0]
+            )
 
         return 0
 
     return logical_to_physical_function
 
 
-def build_physical_to_logical_tables(physical_position_1, physical_position_2, wanted) -> [{str: int}]:
+def build_physical_to_logical_tables(
+    physical_position_1, physical_position_2, wanted
+) -> [{str: int}]:
     result = []
 
     for i in range(len(physical_position_1)):
         table = {}
 
-        first, second = round((physical_position_1[i].as_py() % 4096) / 1024) * 1024 % 4096, round(
-            (physical_position_2[i].as_py() % 4096) / 1024) * 1024 % 4096
+        first, second = (
+            round((physical_position_1[i].as_py() % 4096) / 1024) * 1024 % 4096,
+            round((physical_position_2[i].as_py() % 4096) / 1024) * 1024 % 4096,
+        )
         first, second = first * 360 / 4096, second * 360 / 4096
 
         first, second = int(first), int(second)
@@ -116,14 +136,18 @@ def build_physical_to_logical_tables(physical_position_1, physical_position_2, w
     return result
 
 
-def build_logical_to_physical_tables(physical_position_1, physical_position_2, wanted) -> [{str: int}]:
+def build_logical_to_physical_tables(
+    physical_position_1, physical_position_2, wanted
+) -> [{str: int}]:
     result = []
 
     for i in range(len(physical_position_1)):
         table = {}
 
-        first, second = round(physical_position_1[i].as_py() / 1024) * 1024, round(
-            physical_position_2[i].as_py() / 1024) * 1024
+        first, second = (
+            round(physical_position_1[i].as_py() / 1024) * 1024,
+            round(physical_position_2[i].as_py() / 1024) * 1024,
+        )
         first, second = first * 360 / 4096, second * 360 / 4096
 
         first, second = int(first), int(second)

@@ -56,4 +56,3 @@ ACTIONS = [
     # normalized gripper position (0: close, 1: open)
     "right_arm_gripper",
 ]
-

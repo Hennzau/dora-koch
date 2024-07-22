@@ -10,10 +10,16 @@ import time
 import pyaudio
 
 from parler_tts import ParlerTTSForConditionalGeneration
-from transformers import AutoTokenizer, AutoFeatureExtractor, set_seed, StoppingCriteria, StoppingCriteriaList
+from transformers import (
+    AutoTokenizer,
+    AutoFeatureExtractor,
+    set_seed,
+    StoppingCriteria,
+    StoppingCriteriaList,
+)
 from transformers.generation.streamers import BaseStreamer
 
-device = "cuda:0" #if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+device = "cuda:0"  # if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 torch_dtype = torch.float16 if device != "cpu" else torch.float32
 
 repo_id = "ylacombe/parler-tts-mini-jenny-30H"
@@ -34,6 +40,7 @@ init_sleep = True
 
 
 p = pyaudio.PyAudio()
+
 
 class ParlerTTSStreamer(BaseStreamer):
     def __init__(
@@ -75,7 +82,10 @@ class ParlerTTSStreamer(BaseStreamer):
         if stride is not None:
             self.stride = stride
         else:
-            hop_length = math.floor(self.audio_encoder.config.sampling_rate / self.audio_encoder.config.frame_rate)
+            hop_length = math.floor(
+                self.audio_encoder.config.sampling_rate
+                / self.audio_encoder.config.frame_rate
+            )
             self.stride = hop_length * (play_steps - self.decoder.num_codebooks) // 6
         self.token_cache = None
         self.to_yield = 0
@@ -97,7 +107,9 @@ class ParlerTTSStreamer(BaseStreamer):
         input_ids = self.decoder.apply_delay_pattern_mask(input_ids, delay_pattern_mask)
 
         # revert the pattern delay mask by filtering the pad token id
-        mask = (delay_pattern_mask != self.generation_config.bos_token_id) & (delay_pattern_mask != self.generation_config.pad_token_id)
+        mask = (delay_pattern_mask != self.generation_config.bos_token_id) & (
+            delay_pattern_mask != self.generation_config.pad_token_id
+        )
         input_ids = input_ids[mask].reshape(1, self.decoder.num_codebooks, -1)
         # append the frame dimension back to the audio codes
         input_ids = input_ids[None, ...]
@@ -117,7 +129,9 @@ class ParlerTTSStreamer(BaseStreamer):
             )
         else:
             sample = input_ids[:, 0]
-            sample_mask = (sample >= self.audio_encoder.config.codebook_size).sum(dim=(0, 1)) == 0
+            sample_mask = (sample >= self.audio_encoder.config.codebook_size).sum(
+                dim=(0, 1)
+            ) == 0
             sample = sample[:, :, sample_mask]
             output_values = self.audio_encoder.decode(sample[None, ...], [None])
 
@@ -132,7 +146,9 @@ class ParlerTTSStreamer(BaseStreamer):
         if self.token_cache is None:
             self.token_cache = value
         else:
-            self.token_cache = torch.concatenate([self.token_cache, value[:, None]], dim=-1)
+            self.token_cache = torch.concatenate(
+                [self.token_cache, value[:, None]], dim=-1
+            )
 
         if self.token_cache.shape[-1] % self.play_steps == 0:
             audio_values = self.apply_delay_pattern_mask(self.token_cache)
@@ -168,37 +184,45 @@ class ParlerTTSStreamer(BaseStreamer):
 sampling_rate = model.audio_encoder.config.sampling_rate
 frame_rate = model.audio_encoder.config.frame_rate
 
-stream = p.open(format=pyaudio.paInt16,
-                    channels=1,
-                    rate=sampling_rate,
-                    output=True)
+stream = p.open(format=pyaudio.paInt16, channels=1, rate=sampling_rate, output=True)
+
 
 def play_audio(audio_array):
-    
+
     if np.issubdtype(audio_array.dtype, np.floating):
         max_val = np.max(np.abs(audio_array))
         audio_array = (audio_array / max_val) * 32767
         audio_array = audio_array.astype(np.int16)
-    
+
     stream.write(audio_array.tobytes())
-    
+
+
 class InterruptStoppingCriteria(StoppingCriteria):
     def __init__(self):
         self.stop_signal = False
 
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         return self.stop_signal
 
     def stop(self):
         self.stop_signal = True
 
-def generate_base(node, text=default_text, description=default_description, play_steps_in_s=0.5, len_t = 60):
+
+def generate_base(
+    node,
+    text=default_text,
+    description=default_description,
+    play_steps_in_s=0.5,
+    len_t=60,
+):
     global init_sleep
     play_steps = int(frame_rate * play_steps_in_s)
     streamer = ParlerTTSStreamer(model, device=device, play_steps=play_steps)
     inputs = tokenizer(description, return_tensors="pt").to(device)
     prompt = tokenizer(text, return_tensors="pt").to(device)
-    
+
     stopping_criteria = InterruptStoppingCriteria()
 
     generation_kwargs = dict(
@@ -215,16 +239,18 @@ def generate_base(node, text=default_text, description=default_description, play
     thread.start()
 
     prev_time = time.time()
-    
+
     for new_audio in streamer:
         print("Playing")
         if init_sleep:
             print("Initialising")
             init_sleep = False
-            time.sleep(len_t/60)
-        
+            time.sleep(len_t / 60)
+
         current_time = time.time()
-        print(f"Sample of length: {round(new_audio.shape[0] / sampling_rate, 2)} seconds")
+        print(
+            f"Sample of length: {round(new_audio.shape[0] / sampling_rate, 2)} seconds"
+        )
         print(f"Time between iterations: {round(current_time - prev_time, 2)} seconds")
         prev_time = current_time
         play_audio(new_audio)
@@ -236,6 +262,7 @@ def generate_base(node, text=default_text, description=default_description, play
             if event["id"] == "stop":
                 stopping_criteria.stop()
                 break
+
 
 node = Node()
 while True:

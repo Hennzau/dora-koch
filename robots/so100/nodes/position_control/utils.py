@@ -57,7 +57,7 @@ def logical_to_physical(logical_position: pa.StructArray, table: {}) -> pa.Struc
 
 
 def compute_goal_with_offset(
-        physical_position: pa.StructArray, logical_goal: pa.StructArray, table: {}
+    physical_position: pa.StructArray, logical_goal: pa.StructArray, table: {}
 ):
     joints = physical_position.field("joints")
 

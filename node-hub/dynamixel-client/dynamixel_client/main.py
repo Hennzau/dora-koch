@@ -197,13 +197,16 @@ def main():
             ),
         ),
         "P": joints_values_to_arrow(
-            pa.array(config.keys(), pa.string()), pa.array([config[joint]["P"] for joint in joints], type=pa.uint32())
+            pa.array(config.keys(), pa.string()),
+            pa.array([config[joint]["P"] for joint in joints], type=pa.uint32()),
         ),
         "I": joints_values_to_arrow(
-            pa.array(config.keys(), pa.string()), pa.array([config[joint]["I"] for joint in joints], type=pa.uint32())
+            pa.array(config.keys(), pa.string()),
+            pa.array([config[joint]["I"] for joint in joints], type=pa.uint32()),
         ),
         "D": joints_values_to_arrow(
-            pa.array(config.keys(), pa.string()), pa.array([config[joint]["D"] for joint in joints], type=pa.uint32())
+            pa.array(config.keys(), pa.string()),
+            pa.array([config[joint]["D"] for joint in joints], type=pa.uint32()),
         ),
     }
 

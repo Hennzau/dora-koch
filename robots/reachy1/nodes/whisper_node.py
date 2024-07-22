@@ -54,7 +54,7 @@ for dora_event in node:
 
                 ## Stop the previous Sound
                 node.send_output("stop", pa.array([]))
-                
+
                 ## Microphone
                 audio_data = sd.rec(
                     int(SAMPLE_RATE * MAX_DURATION),
