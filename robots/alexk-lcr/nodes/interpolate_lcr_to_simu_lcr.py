@@ -8,15 +8,11 @@ import pyarrow.compute as pc
 
 from dora import Node
 
-from position_control.utils import (
-    physical_to_logical,
-    compute_goal_with_offset,
-    joints_values_to_arrow,
-)
-
-from position_control.configure import (
-    build_logical_to_physical,
-    build_physical_to_logical,
+from pwm_position_control.load import load_control_table_from_json_conversion_tables
+from pwm_position_control.transform import (
+    wrap_joints_and_values,
+    pwm_to_logical_arrow,
+    logical_to_pwm_with_offset_arrow,
 )
 
 
@@ -54,18 +50,23 @@ def main():
         else args.leader_control
     ) as file:
         leader_control = json.load(file)
+        load_control_table_from_json_conversion_tables(leader_control, leader_control)
 
-    for joint in leader_control.keys():
-        leader_control[joint]["physical_to_logical"] = build_physical_to_logical(
-            leader_control[joint]["physical_to_logical"]
-        )
-        leader_control[joint]["logical_to_physical"] = build_logical_to_physical(
-            leader_control[joint]["logical_to_physical"]
-        )
-
-    logical_leader_initial_goal = joints_values_to_arrow(
-        leader_control.keys(),
-        [leader_control[joint]["goal_position"] for joint in leader_control.keys()],
+    initial_mask = [
+        True if leader_control[joint]["goal_position"] is not None else False
+        for joint in leader_control.keys()
+    ]
+    logical_leader_initial_goal = wrap_joints_and_values(
+        [
+            joint
+            for joint in leader_control.keys()
+            if leader_control[joint]["goal_position"] is not None
+        ],
+        [
+            leader_control[joint]["goal_position"]
+            for joint in leader_control.keys()
+            if leader_control[joint]["goal_position"] is not None
+        ],
     )
 
     node = Node(args.name)
@@ -84,13 +85,15 @@ def main():
                 if not leader_initialized:
                     leader_initialized = True
 
-                    physical_goal = compute_goal_with_offset(
-                        leader_position, logical_leader_initial_goal, leader_control
+                    physical_goal = logical_to_pwm_with_offset_arrow(
+                        leader_position.filter(initial_mask),
+                        logical_leader_initial_goal,
+                        leader_control,
                     )
 
                     node.send_output("leader_goal", physical_goal, event["metadata"])
 
-                leader_position = physical_to_logical(leader_position, leader_control)
+                leader_position = pwm_to_logical_arrow(leader_position, leader_control)
 
                 interpolation_m = pa.array(
                     [
@@ -106,7 +109,7 @@ def main():
 
                 interpolation_a = pa.array([0, 0, 0, 0, 90, 0], type=pa.float32())
 
-                logical_goal = joints_values_to_arrow(
+                logical_goal = wrap_joints_and_values(
                     pa.array(
                         [
                             joint.as_py() + "_joint"

@@ -15,6 +15,7 @@ nodes:
       CONFIG: ../configs/leader.left.json
 
   - id: lcr-to-lcr
+    build: pip install git+https://github.com/Hennzau/pwm-position-control
     path: ../nodes/interpolate_lcr_to_lcr.py
     inputs:
       leader_position:
@@ -31,6 +32,7 @@ nodes:
       FOLLOWER_CONTROL: ../configs/follower.left.json
 
   - id: lcr-to-record
+    build: pip install git+https://github.com/Hennzau/pwm-position-control
     path: ../nodes/interpolate_lcr_to_record.py
     inputs:
       leader_position:

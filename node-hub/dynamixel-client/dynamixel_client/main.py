@@ -12,7 +12,7 @@ import pyarrow as pa
 
 from dora import Node
 
-from .bus import DynamixelBus, TorqueMode, joints_values_to_arrow
+from .bus import DynamixelBus, TorqueMode, wrap_joints_and_values
 
 
 class Client:
@@ -68,7 +68,7 @@ class Client:
 
     def close(self):
         self.bus.write_torque_enable(
-            joints_values_to_arrow(
+            wrap_joints_and_values(
                 self.config["joints"],
                 [TorqueMode.DISABLED.value] * len(self.config["joints"]),
             )
@@ -176,7 +176,7 @@ def main():
         "ids": [config[joint]["id"] for joint in joints],
         "joints": pa.array(config.keys(), pa.string()),
         "models": [config[joint]["model"] for joint in joints],
-        "torque": joints_values_to_arrow(
+        "torque": wrap_joints_and_values(
             pa.array(config.keys(), pa.string()),
             pa.array(
                 [
@@ -190,21 +190,21 @@ def main():
                 type=pa.uint32(),
             ),
         ),
-        "goal_current": joints_values_to_arrow(
+        "goal_current": wrap_joints_and_values(
             pa.array(config.keys(), pa.string()),
             pa.array(
                 [config[joint]["goal_current"] for joint in joints], type=pa.uint32()
             ),
         ),
-        "P": joints_values_to_arrow(
+        "P": wrap_joints_and_values(
             pa.array(config.keys(), pa.string()),
             pa.array([config[joint]["P"] for joint in joints], type=pa.uint32()),
         ),
-        "I": joints_values_to_arrow(
+        "I": wrap_joints_and_values(
             pa.array(config.keys(), pa.string()),
             pa.array([config[joint]["I"] for joint in joints], type=pa.uint32()),
         ),
-        "D": joints_values_to_arrow(
+        "D": wrap_joints_and_values(
             pa.array(config.keys(), pa.string()),
             pa.array([config[joint]["D"] for joint in joints], type=pa.uint32()),
         ),

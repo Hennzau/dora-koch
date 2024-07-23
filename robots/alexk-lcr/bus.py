@@ -1,7 +1,6 @@
 import enum
 
 import pyarrow as pa
-import numpy as np
 
 from typing import Union
 
@@ -19,9 +18,9 @@ BAUD_RATE = 1_000_000
 TIMEOUT_MS = 1000
 
 
-def joints_values_to_arrow(
-    joints: Union[list[str], np.array, pa.Array],
-    values: Union[list[int], np.array, pa.Array],
+def wrap_joints_and_values(
+    joints: Union[list[str], pa.Array],
+    values: Union[list[int], pa.Array],
 ) -> pa.StructArray:
     return pa.StructArray.from_arrays(
         arrays=[joints, values],
@@ -237,20 +236,18 @@ class DynamixelBus:
                 f"{self.packet_handler.getTxRxResult(comm)}"
             )
 
-        numpy_values = np.array(
+        values = pa.array(
             [
                 self.group_readers[group_key].getData(
                     idx, packet_address, packet_bytes_size
                 )
                 for idx in motor_ids
             ],
-            dtype=np.uint32,
+            type=pa.uint32(),
         )
-
-        values = pa.array(numpy_values, type=pa.uint32())
         values = values.from_buffers(pa.int32(), len(values), values.buffers())
 
-        return joints_values_to_arrow(motor_names, values)
+        return wrap_joints_and_values(motor_names, values)
 
     def write_torque_enable(self, torque_mode: pa.StructArray):
         self.write("Torque_Enable", torque_mode)

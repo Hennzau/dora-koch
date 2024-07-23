@@ -4,12 +4,8 @@ import json
 
 from dora import Node
 
-from position_control.utils import compute_goal_with_offset
-
-from position_control.configure import (
-    build_logical_to_physical,
-    build_physical_to_logical,
-)
+from pwm_position_control.load import load_control_table_from_json_conversion_tables
+from pwm_position_control.transform import logical_to_pwm_with_offset_arrow
 
 
 def main():
@@ -46,13 +42,8 @@ def main():
         else args.follower_control
     ) as file:
         follower_control = json.load(file)
-
-    for joint in follower_control.keys():
-        follower_control[joint]["physical_to_logical"] = build_physical_to_logical(
-            follower_control[joint]["physical_to_logical"]
-        )
-        follower_control[joint]["logical_to_physical"] = build_logical_to_physical(
-            follower_control[joint]["logical_to_physical"]
+        load_control_table_from_json_conversion_tables(
+            follower_control, follower_control
         )
 
     node = Node(args.name)
@@ -73,7 +64,7 @@ def main():
                 if not follower_initialized:
                     continue
 
-                physical_goal = compute_goal_with_offset(
+                physical_goal = logical_to_pwm_with_offset_arrow(
                     follower_position, leader_position, follower_control
                 )
 
