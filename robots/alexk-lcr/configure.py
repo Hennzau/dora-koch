@@ -19,7 +19,7 @@ import json
 
 import pyarrow as pa
 
-from bus import DynamixelBus, TorqueMode, OperatingMode, joints_values_to_arrow
+from bus import DynamixelBus, TorqueMode, OperatingMode
 
 from pwm_position_control.transform import pwm_to_logical_arrow, wrap_joints_and_values
 
@@ -56,17 +56,17 @@ def pause():
 
 def configure_servos(bus: DynamixelBus):
     bus.write_torque_enable(
-        joints_values_to_arrow(FULL_ARM, [TorqueMode.DISABLED.value] * 6)
+        wrap_joints_and_values(FULL_ARM, [TorqueMode.DISABLED.value] * 6)
     )
 
     bus.write_operating_mode(
-        joints_values_to_arrow(
+        wrap_joints_and_values(
             ARM_WITHOUT_GRIPPER, [OperatingMode.EXTENDED_POSITION.value] * 5
         )
     )
 
     bus.write_operating_mode(
-        joints_values_to_arrow(
+        wrap_joints_and_values(
             GRIPPER, [OperatingMode.CURRENT_CONTROLLED_POSITION.value]
         )
     )

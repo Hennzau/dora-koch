@@ -117,11 +117,11 @@ class DynamixelBus:
             if motor_model not in MODEL_CONTROL_TABLE:
                 raise ValueError(f"Model {motor_model} is not supported.")
 
-            self.motor_ctrl[pa.scalar(motor_name, pa.string())] = {}
+            self.motor_ctrl[motor_name] = {}
 
-            self.motor_ctrl[pa.scalar(motor_name, pa.string())]["id"] = motor_id
+            self.motor_ctrl[motor_name]["id"] = motor_id
             for data_name, address, bytes_size in MODEL_CONTROL_TABLE[motor_model]:
-                self.motor_ctrl[pa.scalar(motor_name, pa.string())][data_name] = {
+                self.motor_ctrl[motor_name][data_name] = {
                     "addr": address,
                     "bytes_size": bytes_size,
                 }
@@ -143,7 +143,8 @@ class DynamixelBus:
 
     def write(self, data_name: str, data: pa.StructArray):
         motor_ids = [
-            self.motor_ctrl[motor_name]["id"] for motor_name in data.field("joints")
+            self.motor_ctrl[motor_name.as_py()]["id"]
+            for motor_name in data.field("joints")
         ]
 
         values = pa.Array.from_buffers(
@@ -209,7 +210,9 @@ class DynamixelBus:
             )
 
     def read(self, data_name: str, motor_names: pa.Array) -> pa.StructArray:
-        motor_ids = [self.motor_ctrl[motor_name]["id"] for motor_name in motor_names]
+        motor_ids = [
+            self.motor_ctrl[motor_name.as_py()]["id"] for motor_name in motor_names
+        ]
 
         group_key = f"{data_name}_" + "_".join([str(idx) for idx in motor_ids])
 

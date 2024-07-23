@@ -24,6 +24,7 @@ class Client:
         for i in range(len(config["ids"])):
             description[config["joints"][i]] = (config["ids"][i], config["models"][i])
 
+        self.config["joints"] = pa.array(config["joints"], pa.string())
         self.bus = DynamixelBus(config["port"], description)
 
         # Set client configuration values, raise errors if the values are not set to indicate that the motors are not
@@ -174,7 +175,7 @@ def main():
         "name": args.name,
         "port": port,  # (e.g. "/dev/ttyUSB0", "COM3")
         "ids": [config[joint]["id"] for joint in joints],
-        "joints": pa.array(config.keys(), pa.string()),
+        "joints": list(config.keys()),
         "models": [config[joint]["model"] for joint in joints],
         "torque": wrap_joints_and_values(
             pa.array(config.keys(), pa.string()),
