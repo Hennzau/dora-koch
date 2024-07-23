@@ -5,11 +5,6 @@ modular and customizable components, allowing for flexible experimentation in ro
 and dexterous arms, Reachy1 can interact naturally with its environment. It supports various programming languages and
 tools, making it accessible for a wide range of applications in academia and industry.
 
-## Assembling
-
-Check the [ASSEMBLING.md](ASSEMBLING.md) file for instructions on how to assemble the robot from scratch using the
-provided parts from the [AlexK Low Cost Robot](https://github.com/AlexanderKoch-Koch/low_cost_robot)
-
 ## Installation
 
 Check the [INSTALLATION.md](INSTALLATION.md) file for instructions on how to install the required software and

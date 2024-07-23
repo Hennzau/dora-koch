@@ -3,8 +3,6 @@
 Aloha is a bi manual robot that can be teleoperated using a similar arm. This repository contains
 the Dora pipeline to manipulate arms, cameras, and record/replay episodes with LeRobot.
 
-### Hardware Installation
-
 - To check if the robot is connected, install dynamixel
   wizard [here](https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_wizard2/)
 - Dynamixel wizard is a very helpful debugging tool that connects to individual motors of the robot. It allows
