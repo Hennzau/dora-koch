@@ -8,9 +8,9 @@ the Dora pipeline to record episodes for LeRobot.
 Check the [ASSEMBLING.md](ASSEMBLING.md) file for instructions on how to assemble the robot from scratch using the
 provided parts from the [AlexK Low Cost Robot](https://github.com/AlexanderKoch-Koch/low_cost_robot)
 
-## Installations
+## Installation
 
-Check the [INSTALLATIONS.md](INSTALLATION.md) file for instructions on how to install the required software and
+Check the [INSTALLATION.md](INSTALLATION.md) file for instructions on how to install the required software and
 environment
 to run the robot.
 

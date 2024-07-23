@@ -1,91 +1,40 @@
-## Reachy 1
+# Dora pipeline Robots
 
-### Teleoperation
+Reachy1 is an open-source, humanoid robot designed by Pollen Robotics for research and development purposes. It features
+modular and customizable components, allowing for flexible experimentation in robotics and AI. With its expressive face
+and dexterous arms, Reachy1 can interact naturally with its environment. It supports various programming languages and
+tools, making it accessible for a wide range of applications in academia and industry.
 
-```bash
-git clone https://github.com/pollen-robotics/reachy2_hdf5_recorder/
-cd reachy2_hdf5_recorder
-pip install -r requirements.txt
-```
-#### Installation dora-lerobot
+## Assembling
 
-```bash
-## Create new python environment
+Check the [ASSEMBLING.md](ASSEMBLING.md) file for instructions on how to assemble the robot from scratch using the
+provided parts from the [AlexK Low Cost Robot](https://github.com/AlexanderKoch-Koch/low_cost_robot)
 
-cargo install dora-rs --locked
-pip install dora-rs
-```
-### AI Pipeline
+## Installation
 
-### Robot manipulation
+Check the [INSTALLATION.md](INSTALLATION.md) file for instructions on how to install the required software and
+environment
+to run the robot.
 
-Click on the button on the base to turn on the robot, then click on the button on the shoulder of the robot.\
-Make sure the emergency button is not pressed in.
+## Configuring
 
-### Data Collection
+Check the [CONFIGURING.md](CONFIGURING.md) file for instructions on how to configure the robot to record episodes for
+LeRobot and teleoperate the robot.
 
-```bash
-cd reachy2_hdf5_recorder
-python reachy1_record_episodes_hdf5.py -n <recording_session_name>_raw -l <epiodes_duration in s>
-```
+## Recording
 
-```bash
-git clone https://github.com/huggingface/lerobot.git && cd lerobot
-git checkout origin/user/rcadene/2024_06_03_reachy2
-pip install -e .
+It's probably better to check the [examples](#examples) below before trying to record episodes. It will give you a
+better
+understanding of how Dora works.
 
-# Must have a HugginFace token with write permission in https://huggingface.co/settings/tokens
-huggingface-cli login --token ${HUGGINGFACE_TOKEN} --add-to-git-credential
+Check the [RECORDING.md](RECORDING.md) file for instructions on how to record episodes for LeRobot.
 
-cd ../reachy2_hdf5_recorder
-python ../lerobot/lerobot/scripts/push_dataset_to_hub.py 
-    -data-dir data 
-    --dataset-id <recording_session_name>
-    --raw-format reachy2_hdf5 
-    --community-id <HuggingFace_id>
+## Examples
 
-```
+There are also some other example applications in the `graphs` folder. Have fun!
 
-### Training
+Here is a list of the available examples:
 
-```bash
-python lerobot/scripts/train.py 
-    policy=act_reachy2_real 
-    env=dora_reachy2_real 
-    wandb.enable=true 
-    hydra.run.dir=<recording_session_name> 
-    env.state_dim=8 
-    nv.action_dim=8 
-    dataset_repo_id=<HuggingFace_id>/<recording_session_name>
-```
+## License
 
-### Evaluation
-
-Inside of the file `lerobot/<recording_session_name>/checkpoints/last/pretrained_model/config.yaml` change the env.task from DoraReachy2-v0 to DoraReachy1-v0.
-
-Make sure to get the right path for the source and args of eval in the file eval.yml
-
-```bash
-
-dora start reachy/graphs/eval.yml --attach
-```
-
-### Reachy Initialization
-
-```bash
-ssh bedrock@192.168.1.51
-```
-
-```bashH
-cd dev_docker
-sudo service stop
-
-
-docker compose -f mode/dev.yaml up -d core
-
-docker exec -it core bash
-
-# In the docker container
-
-ros2 launch reachy_bringup reachy.launch.py start_sdk_server:=true
-```
+This library is licensed under the [Apache License 2.0](../../LICENSE).

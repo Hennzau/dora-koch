@@ -5,12 +5,11 @@ the Dora pipeline to manipulate arms, cameras, and record/replay episodes with L
 
 ## Assembling
 
-Check the [ASSEMBLING.md](ASSEMBLING.md) file for instructions on how to assemble the robot from scratch using the
-provided parts from the [AlexK Low Cost Robot](https://github.com/AlexanderKoch-Koch/low_cost_robot)
+Check the [ASSEMBLING.md](ASSEMBLING.md) file for instructions on how to assemble the robot.
 
-## Installations
+## Installation
 
-Check the [INSTALLATIONS.md](INSTALLATION.md) file for instructions on how to install the required software and
+Check the [INSTALLATION.md](INSTALLATION.md) file for instructions on how to install the required software and
 environment
 to run the robot.
 

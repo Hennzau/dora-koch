@@ -1,103 +1,40 @@
-## Reachy 2
+# Dora pipeline Robots
 
-### Installation
+Reachy2 is an open-source, humanoid robot designed by Pollen Robotics for research and development purposes. It features
+modular and customizable components, allowing for flexible experimentation in robotics and AI. With its expressive face
+and dexterous arms, Reachy1 can interact naturally with its environment. It supports various programming languages and
+tools, making it accessible for a wide range of applications in academia and industry.
 
-#### Installation SDK
+## Assembling
 
-```bash
-### Install the sdk
-git clone https://github.com/pollen-robotics/reachy2-sdk
-cd reachy2-sdk
-pip install -e .
-cd ..
+Check the [ASSEMBLING.md](ASSEMBLING.md) file for instructions on how to assemble the robot from scratch using the
+provided parts from the [AlexK Low Cost Robot](https://github.com/AlexanderKoch-Koch/low_cost_robot)
 
-### Connect Camera USB
-echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
+## Installation
 
-### Install Polen vision
-git clone https://github.com/pollen-robotics/pollen-vision.git
-cd pollen-vision
-git checkout lerobot_only_left_camera
-pip install ".[depthai_wrapper]"
-cd ..
+Check the [INSTALLATION.md](INSTALLATION.md) file for instructions on how to install the required software and
+environment
+to run the robot.
 
-### Teleoperation Collector
-git clone https://github.com/pollen-robotics/reachy2_hdf5_recorder/
-```
+## Configuring
 
-#### Installation dora-lerobot
+Check the [CONFIGURING.md](CONFIGURING.md) file for instructions on how to configure the robot to record episodes for
+LeRobot and teleoperate the robot.
 
-```bash
-## Create new python environment
+## Recording
 
-git clone git@github.com:huggingface/dora_lerobot.git
-pip install -e dora_lerobot
-git clone git@github.com:dora-rs/dora-dora_lerobot.git --branch WORKING-REACHY
-pip install -e dora-dora_lerobot/gym_dora
+It's probably better to check the [examples](#examples) below before trying to record episodes. It will give you a
+better
+understanding of how Dora works.
 
-cargo install dora-rs --locked
-pip install dora-rs
-```
+Check the [RECORDING.md](RECORDING.md) file for instructions on how to record episodes for LeRobot.
 
-### AI Pipeline
+## Examples
 
-### Data Collection
+There are also some other example applications in the `graphs` folder. Have fun!
 
-```bash
-cd reachy2_hdf5_recorder
-python3 record_episodes_hdf5.py -n <recording_session_name>_raw -l <epiodes_duration in s> -r <framerate> --robot_ip <robot_ip>
-```
+Here is a list of the available examples:
 
-```bash
-huggingface-cli upload \
-                <hf-organisation>/<dataset_name> \
-                data/<recording_session_name>_raw/ \
-                --repo-type dataset (--private)
-```
+## License
 
-> ### 06/07/2021
->
-> As of today, we need to use several branches:
->
-> - mobile_base : branch 21 # server side, install manually
-> - reachy-sdk-api : branch 116 # server and client side, install manually
-> - mobile-base-sdk : branch 25 # client side, install manually
-> - reachy2-sdk-server : branch 135 # server side, install mannually
->   Then push to HF hub!
-
-### Training
-
-```bash
-python dora_lerobot/scripts/train.py \
-    policy=act_real \
-    env=aloha_real \
-    env.task=Reachy-v0 \
-    dataset_repo_id=<org-id>/<data-id< \
-```
-
-### Evaluation
-
-```bash
-dora start reachy/graphs/eval.yml --attach
-```
-
-### Reachy Initialization
-
-```bash
-ssh bedrock@192.168.1.51
-```
-
-```bash
-cd dev_docker
-sudo service stop
-
-
-docker compose -f mode/dev.yaml up -d core
-
-docker exec -it core bash
-
-# In the docker container
-
-ros2 launch reachy_bringup reachy.launch.py start_sdk_server:=true
-```
+This library is licensed under the [Apache License 2.0](../../LICENSE).
