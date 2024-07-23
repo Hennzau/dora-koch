@@ -85,6 +85,11 @@ nodes:
       FOLLOWER_CONTROL: ../configs/follower.left.json
 ```
 
+## Acknowledgement
+
+This work is inspired from [tonyzhaozh/aloha](https://github.com/tonyzhaozh/aloha) and we're trying to bring perfornance
+improvement.
+
 ## License
 
 This library is licensed under the [Apache License 2.0](../../LICENSE).

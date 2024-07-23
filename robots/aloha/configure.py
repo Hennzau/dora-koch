@@ -1,33 +1,35 @@
 """
-Aloha Auto Configure: This program is used to automatically configure the (Aloha) for the user.
+LCR Configuration Tool: This program is used to automatically configure the Low Cost Robot (LCR) for the user.
 
 The program will:
-1. Disable all torque motors of provided Aloha.
-2. Ask the user to move the Aloha to the position 1 (see CONFIGURING.md for more details).
-3. Record the position of the Aloha.
-4. Ask the user to move the Aloha to the position 2 (see CONFIGURING.md for more details).
-5. Record the position of the Aloha.
-8. Calculate the offset and inverted mode of the Aloha.
-9. Let the user verify in real time that the Aloha is working properly.
+1. Disable all torque motors of provided LCR.
+2. Ask the user to move the LCR to the position 1 (see CONFIGURING.md for more details).
+3. Record the position of the LCR.
+4. Ask the user to move the LCR to the position 2 (see CONFIGURING.md for more details).
+5. Record the position of the LCR.
+8. Calculate interpolation functions.
+9. Let the user verify in real time that the LCR is working properly.
 
-It will also enable all appropriate operating modes for the Aloha.
+It will also enable all appropriate operating modes for the LCR.
 """
 
 import argparse
 import time
 import json
 
-import numpy as np
 import pyarrow as pa
 
 from bus import DynamixelBus, TorqueMode, OperatingMode
-from nodes.position_control.utils import physical_to_logical, logical_to_physical
-from nodes.position_control.configure import (
-    build_physical_to_logical_tables,
-    build_logical_to_physical_tables,
-    build_physical_to_logical,
-    build_logical_to_physical,
+
+from pwm_position_control.transform import pwm_to_logical_arrow, wrap_joints_and_values
+
+from pwm_position_control.tables import (
+    construct_logical_to_pwm_conversion_table_arrow,
+    construct_pwm_to_logical_conversion_table_arrow,
 )
+
+from pwm_position_control.functions import construct_control_table
+
 
 FULL_ARM = pa.array(
     [
@@ -62,48 +64,51 @@ GRIPPER = pa.array(["gripper"], type=pa.string())
 
 
 def pause():
-    """
-    Pause the program until the user presses the enter key.
-    """
     input("Press Enter to continue...")
 
 
 def configure_servos(bus: DynamixelBus):
-    """
-    Configure the servos for the Aloha.
-    :param bus: DynamixelBus
-    """
-    bus.write_torque_enable(TorqueMode.DISABLED, FULL_ARM)
+    bus.write_torque_enable(
+        wrap_joints_and_values(FULL_ARM, [TorqueMode.DISABLED.value] * 9)
+    )
 
-    bus.write_operating_mode(OperatingMode.EXTENDED_POSITION, ARM_WITHOUT_GRIPPER)
-    bus.write_operating_mode(OperatingMode.CURRENT_CONTROLLED_POSITION, GRIPPER)
+    bus.write_operating_mode(
+        wrap_joints_and_values(
+            ARM_WITHOUT_GRIPPER, [OperatingMode.EXTENDED_POSITION.value] * 9
+        )
+    )
+
+    bus.write_operating_mode(
+        wrap_joints_and_values(
+            GRIPPER, [OperatingMode.CURRENT_CONTROLLED_POSITION.value]
+        )
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Aloha Auto Configure: This program is used to automatically configure the Aloha for the user."
+        description="LCR Auto Configure: This program is used to automatically configure the Low Cost Robot (LCR) for "
+        "the user."
     )
 
-    parser.add_argument(
-        "--port", type=str, required=True, help="The port of the Aloha."
-    )
+    parser.add_argument("--port", type=str, required=True, help="The port of the LCR.")
     parser.add_argument(
         "--right",
         action="store_true",
-        help="If the Aloha is on the right side of the user.",
+        help="If the LCR is on the right side of the user.",
     )
     parser.add_argument(
         "--left",
         action="store_true",
-        help="If the Aloha is on the left side of the user.",
+        help="If the LCR is on the left side of the user.",
     )
     parser.add_argument(
         "--follower",
         action="store_true",
-        help="If the Aloha is the follower of the user.",
+        help="If the LCR is the follower of the user.",
     )
     parser.add_argument(
-        "--leader", action="store_true", help="If the Aloha is the leader of the user."
+        "--leader", action="store_true", help="If the LCR is the leader of the user."
     )
 
     args = parser.parse_args()
@@ -114,14 +119,9 @@ def main():
     if args.follower and args.leader:
         raise ValueError("You cannot specify both --follower and --leader.")
 
-    wanted_position_1 = pa.array([0, -90, -90, 90, 90, 0, 0, 0, 0], type=pa.int32())
-    wanted_position_2 = pa.array([90, 0, 0, 0, 0, 90, 90, 90, 90], type=pa.int32())
-
-    wanted = pa.array(
-        [
-            (wanted_position_1[i], wanted_position_2[i])
-            for i in range(len(wanted_position_1))
-        ]
+    targets = (
+        wrap_joints_and_values(FULL_ARM, [0, -90, -90, 90, 90, 0, 0, 0, 0]),
+        wrap_joints_and_values(FULL_ARM, [90, 0, 0, 0, 0, 90, 90, 90, 90]),
     )
 
     arm = DynamixelBus(
@@ -141,34 +141,28 @@ def main():
 
     configure_servos(arm)
 
-    print("Please move the Aloha to the first position.")
+    print("Please move the LCR to the first position.")
     pause()
-    physical_position_1 = arm.read_position(FULL_ARM)["values"].values
+    pwm_position_1 = arm.read_position(FULL_ARM)
 
-    print("Please move the Aloha to the second position.")
+    print("Please move the LCR to the second position.")
     pause()
-    physical_position_2 = arm.read_position(FULL_ARM)["values"].values
+    pwm_position_2 = arm.read_position(FULL_ARM)
 
     print("Configuration completed.")
 
-    physical_to_logical_tables = build_physical_to_logical_tables(
-        physical_position_1, physical_position_2, wanted
+    pwm_positions = (pwm_position_1, pwm_position_2)
+
+    pwm_to_logical_conversion_table = construct_pwm_to_logical_conversion_table_arrow(
+        pwm_positions, targets
     )
-    logical_to_physical_tables = build_logical_to_physical_tables(
-        physical_position_1, physical_position_2, wanted
+    logical_to_pwm_conversion_table = construct_logical_to_pwm_conversion_table_arrow(
+        pwm_positions, targets
     )
 
-    control_table = {}
     control_table_json = {}
     for i in range(len(FULL_ARM)):
-        control_table[FULL_ARM[i].as_py()] = {
-            "physical_to_logical": build_physical_to_logical(
-                physical_to_logical_tables[i]
-            ),
-            "logical_to_physical": build_logical_to_physical(
-                logical_to_physical_tables[i]
-            ),
-        }
+        model = "x_series"
 
         control_table_json[FULL_ARM[i].as_py()] = {
             "id": i + 1,
@@ -180,8 +174,8 @@ def main():
                 None if args.leader else 100 if args.follower and i == 8 else None
             ),
             "goal_position": None,
-            "physical_to_logical": physical_to_logical_tables[i],
-            "logical_to_physical": logical_to_physical_tables[i],
+            "pwm_to_logical": pwm_to_logical_conversion_table[FULL_ARM[i].as_py()],
+            "logical_to_pwm": logical_to_pwm_conversion_table[FULL_ARM[i].as_py()],
             "P": None,
             "I": None,
             "D": None,
@@ -200,11 +194,23 @@ def main():
     with open(path, "w") as file:
         json.dump(control_table_json, file)
 
-    while True:
-        base_physical_position = arm.read_position(FULL_ARM)
-        logical_position = physical_to_logical(base_physical_position, control_table)
+    control_table = construct_control_table(
+        pwm_to_logical_conversion_table, logical_to_pwm_conversion_table
+    )
 
-        print(f"Logical Position: {logical_position["values"]}")
+    while True:
+        try:
+            pwm_position = arm.read_position(FULL_ARM)
+            logical_position = pwm_to_logical_arrow(
+                pwm_position, control_table, ranged=True
+            ).field("values")
+
+            print(f"Logical Position: {logical_position}")
+
+        except ConnectionError:
+            print(
+                "Connection error occurred. Please check the connection and try again."
+            )
 
         time.sleep(0.5)
 

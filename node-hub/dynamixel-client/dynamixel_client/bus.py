@@ -20,12 +20,57 @@ TIMEOUT_MS = 1000
 
 def wrap_joints_and_values(
     joints: Union[list[str], pa.Array],
-    values: Union[list[int], pa.Array],
+    values: Union[int, list[int], pa.Array],
 ) -> pa.StructArray:
+    """
+    Wraps joints and their corresponding values into a structured array.
+
+    :param joints: A list, numpy array, or pyarrow array of joint names.
+    :type joints: Union[list[str], np.array, pa.Array]
+    :param values: A single integer value, or a list, numpy array, or pyarrow array of integer values.
+                   If a single integer is provided, it will be broadcasted to all joints.
+    :type values: Union[int, list[int], np.array, pa.Array]
+
+    :return: A structured array with two fields:
+             - "joints": A string field containing the names of the joints.
+             - "values": An Int32Array containing the values corresponding to the joints.
+    :rtype: pa.StructArray
+
+    :raises ValueError: If lengths of joints and values do not match.
+
+    Example:
+    --------
+    joints = ["shoulder_pan", "shoulder_lift", "elbow_flex"]
+    values = [100, 200, 300]
+    struct_array = wrap_joints_and_values(joints, values)
+
+    This example wraps the given joints and their corresponding values into a structured array.
+
+    Another example with a single integer value:
+    joints = ["shoulder_pan", "shoulder_lift", "elbow_flex"]
+    value = 150
+    struct_array = wrap_joints_and_values(joints, value)
+
+    This example broadcasts the single integer value to all joints and wraps them into a structured array.
+    """
+
+    if isinstance(values, int):
+        values = [values] * len(joints)
+
+    if len(joints) != len(values):
+        raise ValueError("joints and values must have the same length")
+
+    mask = pa.array([False] * len(values), type=pa.bool_())
+
+    if isinstance(values, list):
+        mask = pa.array([value is None for value in values])
+
+    if isinstance(values, pa.Array):
+        mask = values.is_null()
+
     return pa.StructArray.from_arrays(
-        arrays=[joints, values],
-        names=["joints", "values"],
-    )
+        arrays=[joints, values], names=["joints", "values"], mask=mask
+    ).drop_null()
 
 
 class TorqueMode(enum.Enum):
