@@ -19,14 +19,15 @@ import json
 
 import pyarrow as pa
 
-from bus import FeetechBus, TorqueMode, OperatingMode, joints_values_to_arrow
-from nodes.position_control.utils import physical_to_logical, logical_to_physical
-from nodes.position_control.configure import (
-    build_physical_to_logical_tables,
-    build_logical_to_physical_tables,
-    build_physical_to_logical,
-    build_logical_to_physical,
+from bus import FeetechBus, TorqueMode, OperatingMode
+from pwm_position_control.transform import pwm_to_logical_arrow, wrap_joints_and_values
+
+from pwm_position_control.tables import (
+    construct_logical_to_pwm_conversion_table_arrow,
+    construct_pwm_to_logical_conversion_table_arrow,
 )
+
+from pwm_position_control.functions import construct_control_table
 
 FULL_ARM = pa.array(
     [
@@ -54,19 +55,19 @@ def pause():
 
 def configure_servos(bus: FeetechBus):
     bus.write_torque_enable(
-        joints_values_to_arrow(FULL_ARM, [TorqueMode.DISABLED.value] * 6)
+        wrap_joints_and_values(FULL_ARM, [TorqueMode.DISABLED.value] * 6)
     )
 
     bus.write_operating_mode(
-        joints_values_to_arrow(FULL_ARM, [OperatingMode.ONE_TURN.value] * 6)
+        wrap_joints_and_values(FULL_ARM, [OperatingMode.ONE_TURN.value] * 6)
     )
 
     bus.write_max_angle_limit(
-        joints_values_to_arrow(FULL_ARM, [pa.scalar(0, pa.uint32())] * 6)
+        wrap_joints_and_values(FULL_ARM, [pa.scalar(0, pa.uint32())] * 6)
     )
 
     bus.write_min_angle_limit(
-        joints_values_to_arrow(FULL_ARM, [pa.scalar(0, pa.uint32())] * 6)
+        wrap_joints_and_values(FULL_ARM, [pa.scalar(0, pa.uint32())] * 6)
     )
 
 
@@ -97,14 +98,9 @@ def main():
 
     args = parser.parse_args()
 
-    wanted_position_1 = pa.array([0, -90, 90, 0, -90, 0], type=pa.int32())
-    wanted_position_2 = pa.array([90, 0, 0, 90, 0, -90], type=pa.int32())
-
-    wanted = pa.array(
-        [
-            (wanted_position_1[i], wanted_position_2[i])
-            for i in range(len(wanted_position_1))
-        ]
+    targets = (
+        wrap_joints_and_values(FULL_ARM, [0, -90, 90, 0, -90, 0]),
+        wrap_joints_and_values(FULL_ARM, [90, 0, 0, 90, 0, -90]),
     )
 
     arm = FeetechBus(
@@ -123,39 +119,31 @@ def main():
 
     print("Please move the SO100 to the first position.")
     pause()
-    physical_position_1 = arm.read_position(FULL_ARM)["values"].values
+    pwm_position_1 = arm.read_position(FULL_ARM)["values"].values
 
     print("Please move the SO100 to the second position.")
     pause()
-    physical_position_2 = arm.read_position(FULL_ARM)["values"].values
+    pwm_position_2 = arm.read_position(FULL_ARM)["values"].values
 
     print("Configuration completed.")
 
-    physical_to_logical_tables = build_physical_to_logical_tables(
-        physical_position_1, physical_position_2, wanted
+    pwm_positions = (pwm_position_1, pwm_position_2)
+
+    pwm_to_logical_conversion_table = construct_pwm_to_logical_conversion_table_arrow(
+        pwm_positions, targets
     )
-    logical_to_physical_tables = build_logical_to_physical_tables(
-        physical_position_1, physical_position_2, wanted
+    logical_to_pwm_conversion_table = construct_logical_to_pwm_conversion_table_arrow(
+        pwm_positions, targets
     )
 
-    control_table = {}
     control_table_json = {}
     for i in range(len(FULL_ARM)):
-        control_table[FULL_ARM[i].as_py()] = {
-            "physical_to_logical": build_physical_to_logical(
-                physical_to_logical_tables[i]
-            ),
-            "logical_to_physical": build_logical_to_physical(
-                logical_to_physical_tables[i]
-            ),
-        }
-
         control_table_json[FULL_ARM[i].as_py()] = {
             "id": i + 1,
             "model": "sts3215",
             "torque": True,
-            "physical_to_logical": physical_to_logical_tables[i],
-            "logical_to_physical": logical_to_physical_tables[i],
+            "pwm_to_logical": pwm_to_logical_conversion_table[FULL_ARM[i].as_py()],
+            "logical_to_pwm": logical_to_pwm_conversion_table[FULL_ARM[i].as_py()],
         }
 
     left = "left" if args.left else "right"
@@ -169,11 +157,23 @@ def main():
     with open(path, "w") as file:
         json.dump(control_table_json, file)
 
-    while True:
-        base_physical_position = arm.read_position(FULL_ARM)
-        logical_position = physical_to_logical(base_physical_position, control_table)
+    control_table = construct_control_table(
+        pwm_to_logical_conversion_table, logical_to_pwm_conversion_table
+    )
 
-        print(f"Logical Position: {logical_position["values"]}")
+    while True:
+        try:
+            pwm_position = arm.read_position(FULL_ARM)
+            logical_position = pwm_to_logical_arrow(
+                pwm_position, control_table, ranged=True
+            ).field("values")
+
+            print(f"Logical Position: {logical_position}")
+
+        except ConnectionError:
+            print(
+                "Connection error occurred. Please check the connection and try again."
+            )
 
         time.sleep(0.5)
 

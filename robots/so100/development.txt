@@ -5,3 +5,5 @@
 -e node-hub/opencv-video-capture
 -e node-hub/replay-client
 -e node-hub/video-encoder
+
+-e git+https://github.com/Hennzau/pwm-position-control#egg=pwm-position-control

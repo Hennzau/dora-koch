@@ -38,7 +38,7 @@ Here is a list of the available examples:
   does not record the episodes, so you don't need to have a camera.
 
 You must configure the arms, retrieve the device port, and modify the file `mono_teleop_real.yml` to set the correct
-environment variables. (e.g. `PORT` and `CONFIG`)
+environment variables. (e.g. `PORT` and `CONFIG`, `LEADER_CONTROL` and `FOLLOWER_CONTROL`)
 
 ```bash
 cd dora-lerobot/

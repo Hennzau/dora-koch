@@ -11,7 +11,7 @@ import pyarrow as pa
 
 from dora import Node
 
-from .bus import FeetechBus, TorqueMode, joints_values_to_arrow
+from .bus import FeetechBus, TorqueMode, wrap_joints_and_values
 
 
 class Client:
@@ -23,6 +23,7 @@ class Client:
         for i in range(len(config["ids"])):
             description[config["joints"][i]] = (config["ids"][i], config["models"][i])
 
+        self.config["joints"] = pa.array(config["joints"], pa.string())
         self.bus = FeetechBus(config["port"], description)
 
         # Set client configuration values and raise errors if the values are not set to indicate that the motors are not
@@ -54,7 +55,12 @@ class Client:
                 raise ValueError("An error occurred in the dataflow: " + event["error"])
 
     def close(self):
-        self.bus.write_torque_enable(TorqueMode.DISABLED, self.config["joints"])
+        self.bus.write_torque_enable(
+            wrap_joints_and_values(
+                self.config["joints"],
+                [TorqueMode.DISABLED.value] * len(self.config["joints"]),
+            )
+        )
 
     def pull_position(self, node, metadata):
         try:
@@ -151,9 +157,9 @@ def main():
         "name": args.name,
         "port": port,  # (e.g. "/dev/ttyUSB0", "COM3")
         "ids": [config[joint]["id"] for joint in joints],
-        "joints": pa.array(joints, pa.string()),
+        "joints": list(config.keys()),
         "models": [config[joint]["model"] for joint in joints],
-        "torque": joints_values_to_arrow(
+        "torque": wrap_joints_and_values(
             pa.array(config.keys(), pa.string()),
             pa.array(
                 [

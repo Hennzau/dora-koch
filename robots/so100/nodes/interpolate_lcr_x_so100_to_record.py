@@ -7,16 +7,14 @@ import pyarrow.compute as pc
 
 from dora import Node
 
+from pwm_position_control.load import load_control_table_from_json_conversion_tables
 from pwm_position_control.transform import (
     wrap_joints_and_values,
     pwm_to_logical_arrow,
-    logical_to_pwm_with_offset_arrow,
 )
-from pwm_position_control.load import load_control_table_from_json_conversion_tables
 
 
 def main():
-    # Handle dynamic nodes, ask for the name of the node in the dataflow
     parser = argparse.ArgumentParser(
         description="Interpolation LCR Node: This Dora node is used to calculates appropriate goal positions for the "
         "LCR followers knowing a Leader position and Follower position."
@@ -27,7 +25,7 @@ def main():
         type=str,
         required=False,
         help="The name of the node in the dataflow.",
-        default="lcr-to-so100",
+        default="lcr-to-record",
     )
     parser.add_argument(
         "--leader-control",
@@ -44,7 +42,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Check if leader-control and follower-control are set
     if not os.environ.get("LEADER_CONTROL") and args.leader_control is None:
         raise ValueError(
             "The leader control is not set. Please set the configuration of the leader in the environment variables or "
@@ -75,29 +72,7 @@ def main():
             follower_control, follower_control
         )
 
-    initial_mask = [
-        True if leader_control[joint]["goal_position"] is not None else False
-        for joint in leader_control.keys()
-    ]
-    logical_leader_initial_goal = wrap_joints_and_values(
-        [
-            joint
-            for joint in leader_control.keys()
-            if leader_control[joint]["goal_position"] is not None
-        ],
-        [
-            leader_control[joint]["goal_position"]
-            for joint in leader_control.keys()
-            if leader_control[joint]["goal_position"] is not None
-        ],
-    )
-
     node = Node(args.name)
-
-    leader_initialized = False
-    follower_initialized = False
-
-    follower_position = None
 
     for event in node:
         event_type = event["type"]
@@ -106,21 +81,7 @@ def main():
             event_id = event["id"]
 
             if event_id == "leader_position":
-                leader_position = event["value"][0]
-
-                if not leader_initialized:
-                    leader_initialized = True
-
-                    pwm_goal = logical_to_pwm_with_offset_arrow(
-                        leader_position.filter(initial_mask),
-                        logical_leader_initial_goal,
-                        leader_control,
-                    )
-
-                    node.send_output("leader_goal", pwm_goal, event["metadata"])
-
-                if not follower_initialized:
-                    continue
+                leader_position = event["value"]
 
                 leader_position = pwm_to_logical_arrow(leader_position, leader_control)
 
@@ -131,18 +92,21 @@ def main():
                     pc.multiply(leader_position.field("values"), interpolation),
                 )
 
-                pwm_goal = logical_to_pwm_with_offset_arrow(
-                    follower_position, logical_goal, follower_control
-                )
-
-                node.send_output("follower_goal", pwm_goal, event["metadata"])
+                node.send_output("logical_goal", logical_goal, event["metadata"])
 
             elif event_id == "follower_position":
-                follower_position = event["value"][0]
-                follower_initialized = True
+                follower_position = event["value"]
+
+                follower_position = pwm_to_logical_arrow(
+                    follower_position, follower_control
+                )
+
+                node.send_output(
+                    "logical_position", follower_position, event["metadata"]
+                )
 
         elif event_type == "ERROR":
-            print("[lcr-to-so100] error: ", event["error"])
+            print("[lcr-to-record] error: ", event["error"])
             break
 
 

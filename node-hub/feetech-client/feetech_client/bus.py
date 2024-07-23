@@ -1,6 +1,5 @@
 import enum
 
-import numpy as np
 import pyarrow as pa
 
 from typing import Union
@@ -19,9 +18,9 @@ BAUD_RATE = 1_000_000
 TIMEOUT_MS = 1000
 
 
-def joints_values_to_arrow(
-    joints: Union[list[str], np.array, pa.Array],
-    values: Union[list[int], np.array, pa.Array],
+def wrap_joints_and_values(
+    joints: Union[list[str], pa.Array],
+    values: Union[list[int], pa.Array],
 ) -> pa.StructArray:
     return pa.StructArray.from_arrays(
         arrays=[joints, values],
@@ -109,11 +108,11 @@ class FeetechBus:
             if motor_model not in MODEL_CONTROL_TABLE:
                 raise ValueError(f"Model {motor_model} is not supported.")
 
-            self.motor_ctrl[pa.scalar(motor_name, pa.string())] = {}
+            self.motor_ctrl[motor_name] = {}
 
-            self.motor_ctrl[pa.scalar(motor_name, pa.string())]["id"] = motor_id
+            self.motor_ctrl[motor_name]["id"] = motor_id
             for data_name, address, bytes_size in MODEL_CONTROL_TABLE[motor_model]:
-                self.motor_ctrl[pa.scalar(motor_name, pa.string())][data_name] = {
+                self.motor_ctrl[motor_name][data_name] = {
                     "addr": address,
                     "bytes_size": bytes_size,
                 }
@@ -135,7 +134,8 @@ class FeetechBus:
 
     def write(self, data_name: str, data: pa.StructArray):
         motor_ids = [
-            self.motor_ctrl[motor_name]["id"] for motor_name in data.field("joints")
+            self.motor_ctrl[motor_name.as_py()]["id"]
+            for motor_name in data.field("joints")
         ]
 
         values = [
@@ -199,7 +199,9 @@ class FeetechBus:
             )
 
     def read(self, data_name: str, motor_names: pa.Array) -> pa.StructArray:
-        motor_ids = [self.motor_ctrl[motor_name]["id"] for motor_name in motor_names]
+        motor_ids = [
+            self.motor_ctrl[motor_name.as_py()]["id"] for motor_name in motor_names
+        ]
 
         group_key = f"{data_name}_" + "_".join([str(idx) for idx in motor_ids])
 
@@ -226,25 +228,25 @@ class FeetechBus:
                 f"{self.packet_handler.getTxRxResult(comm)}"
             )
 
-        numpy_values = np.array(
+        values = pa.array(
             [
                 self.group_readers[group_key].getData(
                     idx, packet_address, packet_bytes_size
                 )
                 for idx in motor_ids
             ],
-            dtype=np.uint32,
+            type=pa.uint32(),
         )
 
-        values = np.array(
+        values = pa.array(
             [
-                np.int32(value) if value < 32767 else np.int32(32767 - value)
-                for value in numpy_values
+                value.as_py() if value.as_py() < 32767 else 32767 - value.as_py()
+                for value in values
             ],
-            dtype=np.int32,
+            type=pa.int32(),
         )
 
-        return joints_values_to_arrow(motor_names, values)
+        return wrap_joints_and_values(motor_names, values)
 
     def write_torque_enable(self, torque_mode: pa.StructArray):
         self.write("Torque_Enable", torque_mode)
