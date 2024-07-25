@@ -6,20 +6,17 @@ description = "Dora Node client for dynamixel motors."
 readme = "README.md"
 
 packages = [
-    { include = "main.py", to = "dynamixel_client" }
+    { include = "main.py", to = "dynamixel_client" },
+    { include = "bus.py", to = "dynamixel_client" },
 ]
 
 [tool.poetry.dependencies]
-python = "^3.11"
 dora-rs = "0.3.5"
-numpy = "2.0.0"
-pyarrow = "16.1.0"
-
-common = { path = "../../common" }
+dynamixel-sdk = "3.7.31"
 
 [tool.poetry.scripts]
 dynamixel-client = "dynamixel_client.main:main"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=1.8.0"]
 build-backend = "poetry.core.masonry.api"

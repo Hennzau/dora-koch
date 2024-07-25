@@ -16,7 +16,7 @@ nodes:
 
       # write_goal_position: some goal position from other node
       # write_goal_current: some goal current from other node
-      
+
       # end: some end signal from other node
     outputs:
       - position # regarding 'pull_position' input, it will output the position every 10ms
@@ -25,19 +25,58 @@ nodes:
 
     env:
       PORT: COM9 # e.g. /dev/ttyUSB0 or COM9
-      
-      IDS: 1 2 3 4 5 6
-      JOINTS: shoulder_pan shoulder_lift elbow_flex wrist_flex wrist_roll gripper
-      MODELS: x_series x_series x_series x_series x_series x_series
-
-      TORQUE: True True True True True True
-
-      INITIAL_GOAL_POSITION: None None None None None None
-      INITIAL_GOAL_CURRENT: None None None None None 500
-
-      OFFSETS:  -2048 2048 2048 2048 1024 2048
-      DRIVE_MODES:  POS NEG NEG NEG NEG NEG
+      CONFIG: config.json # the configuration file for the motors
 ````
+
+## Arrow format
+
+### Outputs
+
+Arrow **Struct** of type:
+
+```Python
+pa.struct([
+    pa.field("joints", pa.list_(pa.string())),
+    pa.field("values", pa.list_(pa.int32()))
+])
+```
+
+### Inputs
+
+Arrow **Array** of type:
+
+```Python
+pa.struct([
+    pa.field("joints", pa.list_(pa.string())),
+    pa.field("values", pa.list_(pa.int32()))
+])
+```
+
+**Note**: only the first element of the array is used, the rest are ignored.
+
+## Configuration
+
+The configuration file that should be passed to the node is a JSON file that contains the configuration for the motors:
+
+```JSON
+{
+  "shoulder_pan": {
+    "id": 1,
+    "model": "x_series",
+    "torque": true,
+    "P": 800,
+    "I": 0,
+    "D": 0,
+    "goal_current": null
+  }
+}
+```
+
+The configuration file starts by the **joint** name of the servo. **id**: the id of the motor in the bus, **model**: the
+model of the motor, **torque**: whether the motor should be
+in torque mode or not (at the beginning), **P**: the proportional gain for position control mode, **I**: the integral
+gain for position control mode, **D**: the derivative gain for position control mode, **goal_current**: the goal current
+for the motor at the beginning, null if you don't want to set it.
 
 ## License
 

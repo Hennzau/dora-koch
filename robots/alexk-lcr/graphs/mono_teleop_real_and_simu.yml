@@ -4,11 +4,13 @@ nodes:
     path: dynamixel-client
     inputs:
       pull_position: simu-lcr-follower/tick
+      write_goal_position: lcr-to-lcr/leader_goal
+      end: simu-lcr-follower/end
     outputs:
       - position
     env:
       PORT: /dev/tty.usbmodem575E0030111
-      CONFIG: ../configs/leader.json
+      CONFIG: ../configs/leader.left.json
 
   - id: lcr-to-lcr
     path: ../nodes/interpolate_lcr_to_lcr.py
@@ -16,28 +18,36 @@ nodes:
       leader_position: lcr-leader/position
       follower_position: lcr-follower/position
     outputs:
-      - goal_position
+      - follower_goal
+      - leader_goal
+    env:
+      LEADER_CONTROL: ../configs/leader.left.json
+      FOLLOWER_CONTROL: ../configs/follower.left.json
 
   - id: lcr-follower
     build: pip install ../../../node-hub/dynamixel-client
     path: dynamixel-client
     inputs:
       pull_position: simu-lcr-follower/tick
-      write_goal_position: lcr-to-lcr/goal_position
-
+      write_goal_position: lcr-to-lcr/follower_goal
       end: simu-lcr-follower/end
     outputs:
       - position
     env:
       PORT: /dev/tty.usbmodem575E0031141
-      CONFIG: ../configs/follower.json
+      CONFIG: ../configs/follower.left.json
 
   - id: lcr-to-simu-lcr
     path: ../nodes/interpolate_lcr_to_simu_lcr.py
     inputs:
-      leader_position: lcr-leader/position
+      leader_position:
+        source: lcr-leader/position
+        queue_size: 1
     outputs:
-      - goal_position
+      - follower_goal
+      - leader_goal
+    env:
+      LEADER_CONTROL: ../configs/leader.left.json
 
   - id: simu-lcr-follower
     build: pip install ../../../node-hub/mujoco-client
@@ -47,14 +57,12 @@ nodes:
     path: mjpython
     args: ../../../node-hub/mujoco-client/main.py
     inputs:
-      write_goal_position: lcr-to-simu-lcr/goal_position
-
+      write_goal_position: lcr-to-simu-lcr/follower_goal
       tick: dora/timer/millis/10
     outputs:
       - position
       - tick
       - end
-
     env:
       SCENE: ../assets/simulation/reach_cube.xml
-      CONFIG: ../configs/simu_follower.json
+      CONFIG: ../configs/follower.left.json
